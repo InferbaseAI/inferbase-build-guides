@@ -1,0 +1,34 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* The theme: edit these to match your brand. HSL components, light then dark. */
+:root {
+  --background: 0 0% 100%;
+  --foreground: 222 30% 12%;
+  --card: 220 20% 98%;
+  --muted: 220 16% 94%;
+  --muted-foreground: 220 10% 42%;
+  --border: 220 14% 88%;
+  --primary: 221 83% 45%;
+  --primary-foreground: 0 0% 100%;
+  --danger: 0 72% 45%;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: 222 24% 8%;
+    --foreground: 220 14% 92%;
+    --card: 222 20% 11%;
+    --muted: 222 16% 16%;
+    --muted-foreground: 220 10% 64%;
+    --border: 222 14% 22%;
+    --primary: 217 91% 62%;
+    --primary-foreground: 222 30% 10%;
+    --danger: 0 80% 62%;
+  }
+}
+
+body {
+  @apply bg-background text-foreground antialiased;
+}
