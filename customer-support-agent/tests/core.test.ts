@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { readChunk } from '../lib/events'
+import { isGuardrailRefusal, readChunk } from '../lib/events'
 import { checkLimits, MemoryLimiter } from '../lib/rate-limit'
 import { validateTurns } from '../lib/validate'
 import { normalize, topK } from '../lib/vector'
@@ -45,5 +45,13 @@ describe('topK', () => {
   it('ranks by cosine similarity', () => {
     const vectors = [[1, 0], [0, 1], [1, 1]].map(normalize)
     assert.deepEqual(topK(normalize([1, 0.1]), vectors, 2).map((h) => h.index), [0, 2])
+  })
+})
+
+describe('isGuardrailRefusal', () => {
+  it('is a guardrail refusal only when the API says so', () => {
+    assert.equal(isGuardrailRefusal(403, 'The input was refused by the guardrail: it looks like a prompt injection.'), true)
+    assert.equal(isGuardrailRefusal(403, "Model 'x' is not in this key's model pool"), false)
+    assert.equal(isGuardrailRefusal(500, 'guardrail provider failed'), false)
   })
 })

@@ -70,3 +70,9 @@ export function readChunk(chunk: unknown): ChatEvent | null {
 export function encodeEvent(event: ChatEvent): Uint8Array {
   return new TextEncoder().encode(JSON.stringify(event) + '\n')
 }
+
+/** A refusal by the API key's guardrail policy (for example a prompt-injection check), told apart
+ *  from other 4xx answers by its message, so a configuration error never reads as "rephrase". */
+export function isGuardrailRefusal(status: number | undefined, message: string): boolean {
+  return (status === 400 || status === 403) && /guardrail/i.test(message)
+}

@@ -13,6 +13,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { APIError } from 'openai'
 import { config } from '../lib/config'
+import { isGuardrailRefusal } from '../lib/events'
 import { inferbase } from '../lib/inferbase'
 import { HANDOFF_MARKER, systemPrompt } from '../lib/prompt'
 import { retrieve } from '../lib/retrieval'
@@ -38,7 +39,7 @@ async function main() {
     } catch (error) {
       // The key's guardrail checks the embeddings call too, so an injection attempt is refused at
       // retrieval, before any chat model sees it. For a case that expects a refusal, that passes.
-      if (error instanceof APIError && error.status === 403) {
+      if (error instanceof APIError && isGuardrailRefusal(error.status, error.message)) {
         total += 1
         const ok = Boolean(c.expect_refusal)
         if (ok) passed += 1

@@ -1,6 +1,6 @@
 import { APIError } from 'openai'
 import { config } from '@/lib/config'
-import { encodeEvent, readChunk, type ChatEvent } from '@/lib/events'
+import { encodeEvent, isGuardrailRefusal, readChunk, type ChatEvent } from '@/lib/events'
 import { inferbase } from '@/lib/inferbase'
 import { systemPrompt } from '@/lib/prompt'
 import { checkLimits, MemoryLimiter, visitorAddress } from '@/lib/rate-limit'
@@ -88,10 +88,9 @@ function describe(error: unknown): string {
   if (error instanceof APIError) {
     if (error.status === 402) return 'The assistant has reached its usage limit for today. Please try again tomorrow.'
     if (error.status === 429) return 'The assistant is busy. Please try again in a minute.'
-    if (error.status === 400 || error.status === 403) {
-      // A guardrail refusal (for example a prompt-injection check) arrives as a 4xx with a reason.
-      return 'This message could not be answered. Please rephrase it.'
-    }
+    if (isGuardrailRefusal(error.status, error.message)) return 'This message could not be answered. Please rephrase it.'
+    // Anything else is ours to fix (a model outside the key's pool, a bad key): log it, say little.
+    console.error('[chat]', error.status, error.message)
     return 'The assistant could not answer just now. Please try again.'
   }
   console.error('[chat]', error)
