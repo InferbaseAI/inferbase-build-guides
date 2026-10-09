@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import type { Source } from '@/lib/retrieval'
 
 /**
@@ -23,7 +24,7 @@ export function Answer({ text, sources }: { text: string; sources: Source[] }) {
   )
 }
 
-function withCitations(text: string, sources: Source[]): React.ReactNode[] {
+function withCitations(text: string, sources: Source[]): ReactNode[] {
   return text.split(/(\[\d+\])/).map((piece, i) => {
     const match = /^\[(\d+)\]$/.exec(piece)
     const source = match ? sources.find((s) => s.n === Number(match[1])) : undefined

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
 import type { ChatTurn } from '@/lib/validate'
 
 /** "Contact support": the visitor's email and an optional note, sent with the conversation. */
@@ -10,7 +10,7 @@ export function HandoffForm({ turns, turnstileToken, onClose }: { turns: ChatTur
   const [state, setState] = useState<'idle' | 'sending' | 'sent'>('idle')
   const [error, setError] = useState<string | null>(null)
 
-  async function submit(event: React.FormEvent) {
+  async function submit(event: FormEvent) {
     event.preventDefault()
     setState('sending')
     setError(null)

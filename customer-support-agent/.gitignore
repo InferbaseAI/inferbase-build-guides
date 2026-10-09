@@ -6,3 +6,5 @@ next-env.d.ts
 *.tsbuildinfo
 # Built from your docs by `npm run index`; regenerate rather than commit.
 data/index.json
+.vercel
+.env*
