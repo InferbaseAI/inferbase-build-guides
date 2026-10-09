@@ -28,6 +28,8 @@ export const config = {
    *  `low`, `medium` or `high` turn it on for models that have it. */
   reasoningEffort: (process.env.REASONING_EFFORT || 'none') as 'none' | 'minimal' | 'low' | 'medium' | 'high',
   productName: process.env.PRODUCT_NAME || 'Inferbase',
+  /** What the assistant is called in the header and the launcher: "Inferbase Copilot". */
+  assistantName: process.env.ASSISTANT_NAME || 'Copilot',
   turnstileSecret: process.env.TURNSTILE_SECRET_KEY || '',
   ratePerMinute: int('RATE_LIMIT_PER_MINUTE', 6),
   ratePerDay: int('RATE_LIMIT_PER_DAY', 60),

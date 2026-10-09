@@ -24,11 +24,13 @@ const SUGGESTIONS = ['How does auto routing choose a model?', 'How do I use my o
 
 export function Chat({
   productName,
+  assistantName,
   embedded,
   handoffEnabled,
   turnstileSiteKey,
 }: {
   productName: string
+  assistantName: string
   embedded: boolean
   handoffEnabled: boolean
   turnstileSiteKey: string
@@ -99,28 +101,56 @@ export function Chat({
   }
 
   const needsCheck = Boolean(turnstileSiteKey) && messages.length === 0 && !turnstileToken
+  const title = `${productName} ${assistantName}`
+
+  function reset() {
+    if (busy) return
+    setMessages([])
+    setHandoffOpen(false)
+    setInput('')
+  }
 
   return (
-    <main className={`mx-auto flex h-dvh max-w-3xl flex-col ${embedded ? 'px-3' : 'px-4 sm:px-6'}`}>
-      <header className={`flex items-center justify-between border-b border-border ${embedded ? 'py-2' : 'py-4'}`}>
-        <div>
-          <h1 className={`font-semibold ${embedded ? 'text-sm' : 'text-lg'}`}>{productName} support</h1>
-          {!embedded && <p className="text-sm text-muted-foreground">Answers come from the documentation, with sources.</p>}
+    <main className={`mx-auto flex h-dvh flex-col bg-background ${embedded ? '' : 'max-w-3xl'}`}>
+      <header className={`flex items-center gap-3 border-b border-border ${embedded ? 'px-4 py-3' : 'px-4 py-4 sm:px-6'}`}>
+        <Mark />
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate text-sm font-semibold">{title}</h1>
+          <p className="truncate text-xs text-muted-foreground">Answers from the {productName} documentation</p>
         </div>
+        {messages.length > 0 && (
+          <button type="button" onClick={reset} disabled={busy} className="rounded-md border border-border px-2.5 py-1 text-xs hover:bg-muted disabled:opacity-50">
+            New chat
+          </button>
+        )}
         {handoffEnabled && !handoffOpen && (
-          <button type="button" onClick={() => setHandoffOpen(true)} className="rounded-md border border-border px-2.5 py-1 text-xs">
+          <button type="button" onClick={() => setHandoffOpen(true)} className="rounded-md border border-border px-2.5 py-1 text-xs hover:bg-muted">
             Contact support
           </button>
         )}
       </header>
 
-      <div className="flex-1 space-y-4 overflow-y-auto py-4 text-sm" aria-live="polite">
+      <div className={`flex-1 space-y-5 overflow-y-auto py-5 text-sm ${embedded ? 'px-4' : 'px-4 sm:px-6'}`} aria-live="polite">
         {messages.length === 0 && (
-          <div className="space-y-3">
-            <p className="text-muted-foreground">Ask a question about {productName}.</p>
-            <div className="flex flex-wrap gap-2">
+          <div className="space-y-4">
+            <div className="flex gap-3">
+              <Mark small />
+              <div className="space-y-1">
+                <p className="font-medium">Hi, I am the {title}.</p>
+                <p className="text-muted-foreground">
+                  Ask me how {productName} works: routing, keys, policies, the API. I answer from the documentation and show the pages I used.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-col items-start gap-2 pl-10">
               {SUGGESTIONS.map((s) => (
-                <button key={s} type="button" onClick={() => ask(s)} disabled={needsCheck} className="rounded-md border border-border px-3 py-1.5 text-left text-xs hover:bg-muted disabled:opacity-60">
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => ask(s)}
+                  disabled={needsCheck}
+                  className="rounded-md border border-border px-3 py-1.5 text-left text-xs text-foreground/90 transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-primary disabled:opacity-60"
+                >
                   {s}
                 </button>
               ))}
@@ -129,14 +159,17 @@ export function Chat({
         )}
         {messages.map((m, i) =>
           m.role === 'user' ? (
-            <div key={i} className="ml-auto max-w-[85%] rounded-md bg-primary px-3 py-2 text-primary-foreground">
-              <p className="whitespace-pre-wrap">{m.content}</p>
+            <div key={i} className="flex justify-end">
+              <p className="max-w-[85%] whitespace-pre-wrap rounded-lg rounded-br-sm bg-primary px-3 py-2 text-primary-foreground">{m.content}</p>
             </div>
           ) : (
-            <div key={i} className="max-w-full">
-              {m.content ? <Answer text={m.content.replace(HANDOFF_MARKER, '')} sources={m.sources ?? []} /> : m.streaming && <p className="text-muted-foreground">Thinking...</p>}
-              {m.error && <p className="text-danger">{m.error}</p>}
-              {!m.streaming && !m.error && <Receipt sources={m.sources ?? []} routing={m.routing} usage={m.usage} />}
+            <div key={i} className="flex gap-3">
+              <Mark small />
+              <div className="min-w-0 flex-1 pt-0.5">
+                {m.content ? <Answer text={m.content.replace(HANDOFF_MARKER, '')} sources={m.sources ?? []} /> : m.streaming && <Typing />}
+                {m.error && <p className="rounded-md border border-danger/30 bg-danger/5 px-3 py-2 text-danger">{m.error}</p>}
+                {!m.streaming && !m.error && <Receipt sources={m.sources ?? []} routing={m.routing} usage={m.usage} />}
+              </div>
             </div>
           ),
         )}
@@ -149,13 +182,17 @@ export function Chat({
           e.preventDefault()
           void ask(input)
         }}
-        className="border-t border-border py-3"
+        className={`border-t border-border pb-3 pt-3 ${embedded ? 'px-4' : 'px-4 sm:px-6'}`}
       >
         {turnstileSiteKey && messages.length === 0 && <Turnstile siteKey={turnstileSiteKey} onToken={onToken} />}
-        <div className="flex gap-2">
+        <div className="flex items-end gap-2 rounded-lg border border-border bg-background p-1.5 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/15">
           <textarea
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={(e) => {
+              setInput(e.target.value)
+              e.target.style.height = 'auto'
+              e.target.style.height = `${Math.min(e.target.scrollHeight, 160)}px`
+            }}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault()
@@ -163,15 +200,22 @@ export function Chat({
               }
             }}
             rows={1}
-            placeholder="Ask a question"
+            placeholder={`Ask ${assistantName} a question`}
             aria-label="Your question"
-            className="max-h-40 flex-1 resize-none rounded-md border border-border bg-background px-3 py-2 text-sm"
+            className="max-h-40 flex-1 resize-none bg-transparent px-2 py-1.5 text-sm outline-none placeholder:text-muted-foreground"
           />
-          <button type="submit" disabled={busy || !input.trim() || needsCheck} className="rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-60">
-            Send
+          <button
+            type="submit"
+            disabled={busy || !input.trim() || needsCheck}
+            aria-label="Send"
+            className="inline-flex size-8 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground transition-opacity disabled:opacity-40"
+          >
+            <svg viewBox="0 0 16 16" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+              <path d="M8 13V3M3.5 7.5 8 3l4.5 4.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
           </button>
         </div>
-        <p className="mt-2 text-xs text-muted-foreground">
+        <p className="mt-2 text-center text-[11px] text-muted-foreground">
           Answers are generated and can be wrong. Routed by{' '}
           <a href="https://inferbase.ai" target="_blank" rel="noreferrer" className="underline-offset-2 hover:underline">
             Inferbase
@@ -180,6 +224,30 @@ export function Chat({
         </p>
       </form>
     </main>
+  )
+}
+
+/** The assistant's mark: a rounded square, so it reads as the product, not a person. */
+function Mark({ small = false }: { small?: boolean }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={`inline-flex shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary ${small ? 'size-7' : 'size-8'}`}
+    >
+      <svg viewBox="0 0 16 16" className={small ? 'size-3.5' : 'size-4'} fill="currentColor">
+        <path d="M8 1.5 9.6 6.4 14.5 8 9.6 9.6 8 14.5 6.4 9.6 1.5 8 6.4 6.4Z" />
+      </svg>
+    </span>
+  )
+}
+
+function Typing() {
+  return (
+    <span className="inline-flex items-center gap-1 py-2" aria-label="Writing an answer">
+      {[0, 150, 300].map((delay) => (
+        <span key={delay} className="size-1.5 animate-bounce rounded-full bg-muted-foreground/60" style={{ animationDelay: `${delay}ms` }} />
+      ))}
+    </span>
   )
 }
 

@@ -6,7 +6,7 @@ import './globals.css'
 const sans = IBM_Plex_Sans({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--font-sans' })
 
 export const metadata: Metadata = {
-  title: `${process.env.PRODUCT_NAME || 'Inferbase'} support`,
+  title: `${process.env.PRODUCT_NAME || 'Inferbase'} ${process.env.ASSISTANT_NAME || 'Copilot'}`,
   description: 'Ask questions about the product. Answers come from the documentation, with sources.',
   robots: { index: false },
 }

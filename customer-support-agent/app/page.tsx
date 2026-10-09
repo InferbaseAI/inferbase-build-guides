@@ -7,6 +7,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ e
   return (
     <Chat
       productName={config.productName}
+      assistantName={config.assistantName}
       embedded={embed === '1'}
       handoffEnabled={config.handoff.enabled}
       turnstileSiteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || ''}
