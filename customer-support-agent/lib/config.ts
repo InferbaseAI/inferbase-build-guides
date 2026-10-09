@@ -23,6 +23,10 @@ export const config = {
   source: process.env.INFERBASE_SOURCE || 'support-agent',
   chatModel: process.env.CHAT_MODEL || 'auto',
   maxAnswerTokens: int('MAX_ANSWER_TOKENS', 700),
+  /** Thinking off by default: an answer from the docs needs no reasoning, and a reasoning model
+   *  spends max_tokens on thinking first, so a short budget can end with no answer at all.
+   *  `low`, `medium` or `high` turn it on for models that have it. */
+  reasoningEffort: (process.env.REASONING_EFFORT || 'none') as 'none' | 'minimal' | 'low' | 'medium' | 'high',
   productName: process.env.PRODUCT_NAME || 'Inferbase',
   turnstileSecret: process.env.TURNSTILE_SECRET_KEY || '',
   ratePerMinute: int('RATE_LIMIT_PER_MINUTE', 6),

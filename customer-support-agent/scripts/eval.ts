@@ -60,6 +60,7 @@ async function main() {
       const completion = await inferbase().chat.completions.create({
         model: config.chatModel,
         max_tokens: config.maxAnswerTokens,
+        reasoning_effort: config.reasoningEffort,
         messages: [
           { role: 'system', content: systemPrompt(config.productName, passages, sources) },
           { role: 'user', content: c.question },

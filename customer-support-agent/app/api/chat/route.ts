@@ -59,6 +59,7 @@ export async function POST(request: Request): Promise<Response> {
           model: config.chatModel,
           stream: true,
           max_tokens: config.maxAnswerTokens,
+          reasoning_effort: config.reasoningEffort,
           messages: [
             { role: 'system', content: systemPrompt(config.productName, passages, sources) },
             ...valid.turns,
