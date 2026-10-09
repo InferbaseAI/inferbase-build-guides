@@ -6,7 +6,7 @@
   { "question": "How do I see why a request went to a particular model?", "expect_pages": ["/docs/concepts/reading-a-routing-decision", "/docs/observability/logs"], "expect_any": ["decision", "Logs", "routing"] },
   { "question": "What does a guardrail policy check?", "expect_pages": ["/docs/policies/guardrail-policies", "/docs/policies/create-a-guardrail-policy"], "expect_any": ["injection", "unsafe"] },
   { "question": "Does a streamed response include the routing decision?", "expect_pages": ["/docs/api/routing", "/docs/api/chat-completions"], "expect_any": ["routing", "event"] },
-  { "question": "Which request shapes does the API accept?", "expect_pages": ["/docs/api", "/docs/gateway/client-compatibility"], "expect_any": ["Chat Completions", "chat completions", "Responses", "Messages"] },
+  { "question": "Which request shapes does the API accept?", "expect_pages": ["/docs/api", "/docs/gateway/client-compatibility", "/docs/api/chat-completions", "/docs/api/responses", "/docs/api/anthropic-messages"], "expect_any": ["Chat Completions", "chat completions", "Responses", "Messages"] },
   { "question": "How are API errors returned?", "expect_pages": ["/docs/api/errors"], "expect_any": ["error", "request_id"] },
   { "question": "Can I connect AWS Bedrock or Azure with my own cloud account?", "expect_pages": ["/docs/gateway/connections"], "expect_any": ["Bedrock", "Azure", "cloud"] },
   { "question": "What is a routing policy?", "expect_pages": ["/docs/policies/routing-policies", "/docs/policies/create-a-routing-policy"], "expect_any": ["policy", "pool", "objective"] },

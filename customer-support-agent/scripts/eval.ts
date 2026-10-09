@@ -11,6 +11,7 @@
  */
 import fs from 'node:fs'
 import path from 'node:path'
+import { APIError } from 'openai'
 import { config } from '../lib/config'
 import { inferbase } from '../lib/inferbase'
 import { HANDOFF_MARKER, systemPrompt } from '../lib/prompt'
@@ -31,7 +32,22 @@ async function main() {
   let passed = 0
   let total = 0
   for (const c of cases) {
-    const { passages, sources } = await retrieve(c.question, config.retrieval.topK)
+    let retrieved: Awaited<ReturnType<typeof retrieve>>
+    try {
+      retrieved = await retrieve(c.question, config.retrieval.topK)
+    } catch (error) {
+      // The key's guardrail checks the embeddings call too, so an injection attempt is refused at
+      // retrieval, before any chat model sees it. For a case that expects a refusal, that passes.
+      if (error instanceof APIError && error.status === 403) {
+        total += 1
+        const ok = Boolean(c.expect_refusal)
+        if (ok) passed += 1
+        console.log(`${ok ? 'PASS' : 'FAIL'}  ${c.question}\n      refused by the guardrail: ${error.message}`)
+        continue
+      }
+      throw error
+    }
+    const { passages, sources } = retrieved
     const found = sources.map((s) => new URL(s.url).pathname)
     const failures: string[] = []
     if (c.expect_pages) {
