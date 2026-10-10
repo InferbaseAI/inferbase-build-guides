@@ -59,7 +59,7 @@ export async function POST(request: Request): Promise<Response> {
           max_tokens: config.maxAnswerTokens,
           reasoning_effort: config.reasoningEffort,
           messages: [
-            { role: 'system', content: systemPrompt(config.productName, passages, sources) },
+            { role: 'system', content: systemPrompt(config.productName, passages, sources, config.comparisonsUrl) },
             ...valid.turns,
           ],
         })

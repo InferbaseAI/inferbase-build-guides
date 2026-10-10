@@ -278,5 +278,63 @@
       "not use",
       "no."
     ]
+  },
+  {
+    "question": "how does your plan compares with your rivals ?",
+    "expect_pages": [
+      "/compare",
+      "/compare/openrouter",
+      "/compare/litellm",
+      "/compare/portkey",
+      "/compare/notdiamond",
+      "/compare/routellm"
+    ],
+    "expect_any": [
+      "OpenRouter",
+      "LiteLLM",
+      "Portkey",
+      "NotDiamond",
+      "RouteLLM"
+    ]
+  },
+  {
+    "question": "How is Inferbase different from OpenRouter?",
+    "expect_pages": [
+      "/compare/openrouter"
+    ],
+    "expect_any": [
+      "provider",
+      "Auto Router",
+      "NotDiamond"
+    ]
+  },
+  {
+    "question": "Is OpenRouter cheaper than Inferbase?",
+    "expect_pages": [
+      "/compare/openrouter"
+    ],
+    "expect_any": [
+      "markup",
+      "passthrough",
+      "pass"
+    ]
+  },
+  {
+    "question": "Which is better, Inferbase or LiteLLM?",
+    "expect_pages": [
+      "/compare/litellm"
+    ],
+    "expect_any": [
+      "LiteLLM is",
+      "LiteLLM, not Inferbase",
+      "better fit"
+    ]
+  },
+  {
+    "question": "How do you compare with Martian?",
+    "expect_any": [
+      "no published comparison",
+      "inferbase.ai/compare"
+    ]
   }
 ]

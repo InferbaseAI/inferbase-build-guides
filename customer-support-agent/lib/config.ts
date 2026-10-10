@@ -30,6 +30,9 @@ export const config = {
   productName: process.env.PRODUCT_NAME || 'Inferbase',
   /** What the assistant is called in the header and the launcher: "Inferbase Copilot". */
   assistantName: process.env.ASSISTANT_NAME || 'Copilot',
+  /** Where your published comparisons with other products live. A question about a product with no
+   *  comparison in the index is pointed here; empty says only that there is none. */
+  comparisonsUrl: process.env.COMPARISONS_URL ?? 'https://inferbase.ai/compare',
   turnstileSecret: process.env.TURNSTILE_SECRET_KEY || '',
   ratePerMinute: int('RATE_LIMIT_PER_MINUTE', 6),
   ratePerDay: int('RATE_LIMIT_PER_DAY', 60),

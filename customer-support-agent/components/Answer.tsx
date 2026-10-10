@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import type { Source } from '@/lib/retrieval'
+import { normalizeCitations } from '@/lib/citations'
 
 /**
  * The small slice of markdown support answers use: code fences, bullet and numbered lists,
@@ -7,7 +8,7 @@ import type { Source } from '@/lib/retrieval'
  * and readable; swap in a markdown library if your answers need tables or more.
  */
 export function Answer({ text, sources }: { text: string; sources: Source[] }) {
-  const parts = text.split(/```[a-zA-Z0-9_-]*\n?/)
+  const parts = normalizeCitations(text).split(/```[a-zA-Z0-9_-]*\n?/)
   return (
     <div className="space-y-3 leading-relaxed">
       {parts.map((part, i) =>

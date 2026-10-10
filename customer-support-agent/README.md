@@ -35,7 +35,7 @@ npm run dev                    # http://localhost:3000
 ```
 
 The defaults index Inferbase's own documentation. Point `DOCS_SOURCE_URL` at your site's
-`llms-full.txt` (and `DOCS_SOURCE_PREFIX` at your docs path) to make it yours.
+`llms-full.txt` (and `DOCS_SOURCE_PREFIX` at the paths to index, comma-separated) to make it yours.
 
 ## Set up the API key in Inferbase
 

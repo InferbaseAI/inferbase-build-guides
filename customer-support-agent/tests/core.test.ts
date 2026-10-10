@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
+import { normalizeCitations } from '../lib/citations'
 import { isGuardrailRefusal, readChunk } from '../lib/events'
 import { checkLimits, MemoryLimiter } from '../lib/rate-limit'
 import { queryText } from '../lib/retrieval'
@@ -58,9 +59,22 @@ describe('isGuardrailRefusal', () => {
 })
 
 describe('queryText', () => {
-  it('puts the task in front of a question for Qwen3-Embedding, and leaves other models alone', () => {
-    const q = 'Do you train on my data?'
-    assert.match(queryText('qwen3-embedding-0-6b', q), /^Instruct: .+\nQuery: Do you train on my data\?$/)
-    assert.equal(queryText('text-embedding-3-small', q), q)
+  it('puts the task in front of a question for Qwen3-Embedding, and no task for other models', () => {
+    const q = 'How do I create embeddings?'
+    assert.match(queryText('qwen3-embedding-0-6b', q, 'Acme'), /^Instruct: .+\nQuery: How do I create embeddings\?$/)
+    assert.equal(queryText('text-embedding-3-small', q, 'Acme'), q)
+  })
+
+  it('names the product where the visitor says you or your', () => {
+    assert.equal(queryText('m', 'Who are your competitors?', 'Acme'), "Who are Acme's competitors?")
+    assert.equal(queryText('m', 'Do you train on my data? Is it yours?', 'Acme'), "Do Acme train on my data? Is it Acme's?")
+    assert.equal(queryText('m', 'Can I use my own key? Is youth young?', 'Acme'), 'Can I use my own key? Is youth young?')
+  })
+})
+
+describe('normalizeCitations', () => {
+  it('turns a model\'s native citations into [n], and leaves [n] and other brackets alone', () => {
+    assert.equal(normalizeCitations('Yes【1†L1-L4】【5†L2】. No【2】.'), 'Yes[1][5]. No[2].')
+    assert.equal(normalizeCitations('Already [3], and 【a note】.'), 'Already [3], and 【a note】.')
   })
 })

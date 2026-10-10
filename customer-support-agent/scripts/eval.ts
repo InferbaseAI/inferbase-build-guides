@@ -63,7 +63,7 @@ async function main() {
         max_tokens: config.maxAnswerTokens,
         reasoning_effort: config.reasoningEffort,
         messages: [
-          { role: 'system', content: systemPrompt(config.productName, passages, sources) },
+          { role: 'system', content: systemPrompt(config.productName, passages, sources, config.comparisonsUrl) },
           { role: 'user', content: c.question },
         ],
       })

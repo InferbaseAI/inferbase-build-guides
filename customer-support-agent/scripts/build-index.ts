@@ -14,15 +14,19 @@ import type { DocsIndex, IndexedPassage } from '../lib/retrieval'
 import { normalize } from '../lib/vector'
 
 const SOURCE = process.env.DOCS_SOURCE_URL || 'https://inferbase.ai/llms-full.txt'
-const PREFIX = process.env.DOCS_SOURCE_PREFIX ?? 'https://inferbase.ai/docs'
+// Which pages of the file to index, by Source URL; comma-separated. Empty indexes every page.
+const PREFIXES = (process.env.DOCS_SOURCE_PREFIX ?? 'https://inferbase.ai/docs,https://inferbase.ai/compare')
+  .split(',')
+  .map((p) => p.trim())
+  .filter(Boolean)
 const MODEL = process.env.EMBEDDING_MODEL || 'auto'
 const BATCH = 64
 
 async function main() {
   const response = await fetch(SOURCE)
   if (!response.ok) throw new Error(`${SOURCE} answered ${response.status}`)
-  const pages = parseLlmsFull(await response.text(), PREFIX)
-  if (pages.length === 0) throw new Error(`No pages under ${PREFIX || '(any prefix)'} in ${SOURCE}`)
+  const pages = parseLlmsFull(await response.text(), PREFIXES)
+  if (pages.length === 0) throw new Error(`No pages under ${PREFIXES.join(', ') || '(any prefix)'} in ${SOURCE}`)
   const passages = pages.flatMap((page) => chunkPage(page))
   console.log(`${pages.length} pages, ${passages.length} passages from ${SOURCE}`)
 

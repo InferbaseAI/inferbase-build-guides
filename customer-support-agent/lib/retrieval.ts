@@ -1,5 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import { config } from './config'
 import type { Passage } from './docs'
 import { inferbase } from './inferbase'
 import { normalize, topK } from './vector'
@@ -38,23 +39,33 @@ export function loadIndex(): DocsIndex {
 }
 
 /**
- * The text embedded for a question. Instruction-tuned embedding models expect a query to carry
+ * The text embedded for a question (the model answering still sees the visitor's own words).
+ *
+ * A visitor says "you": "Who are your competitors?" means the product's competitors, but an
+ * embedding has no idea who "you" is, and that question found the catalog's model-comparison
+ * pages instead of the comparisons. Naming the product in its place ("Who are Inferbase's
+ * competitors?") ranks them first. Measured on 29 questions: 27 -> 29 in the top 6, none worse.
+ *
+ * Instruction-tuned embedding models also expect a query to carry
  * the task in front of it, while passages are embedded bare: Qwen3-Embedding's model card asks
  * for `Instruct: <task>\nQuery: <question>`, and without it short questions drift toward any
  * passage that shares a word ("Do you train on my data?" found the catalog's "training cutoff"
  * fields instead of the privacy section). Other models get the question as is.
  */
-export function queryText(model: string, question: string): string {
+export function queryText(model: string, question: string, productName: string): string {
+  const named = question
+    .replace(/\byours?\b/gi, `${productName}'s`)
+    .replace(/\byou\b/gi, productName)
   if (/qwen3-embedding/i.test(model)) {
-    return `Instruct: Given a question about a product, retrieve documentation passages that answer it\nQuery: ${question}`
+    return `Instruct: Given a question about a product, retrieve documentation passages that answer it\nQuery: ${named}`
   }
-  return question
+  return named
 }
 
 /** The passages most relevant to `question`, numbered for citation as [1], [2], ... */
 export async function retrieve(question: string, k: number): Promise<{ passages: IndexedPassage[]; sources: Source[] }> {
   const index = loadIndex()
-  const response = await inferbase().embeddings.create({ model: index.model, input: queryText(index.model, question) })
+  const response = await inferbase().embeddings.create({ model: index.model, input: queryText(index.model, question, config.productName) })
   const query = normalize(response.data[0].embedding)
   const hits = topK(
     query,

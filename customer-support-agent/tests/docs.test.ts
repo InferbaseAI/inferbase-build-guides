@@ -24,10 +24,15 @@ Text.
 
 describe('parseLlmsFull', () => {
   it('keeps pages with a Source line, under the prefix', () => {
-    const pages = parseLlmsFull(SAMPLE, 'https://example.com/docs')
+    const pages = parseLlmsFull(SAMPLE, ['https://example.com/docs'])
     assert.deepEqual(pages.map((p) => p.url), ['https://example.com/docs/quickstart'])
     assert.equal(pages[0].title, 'Quickstart')
     assert.ok(!pages[0].text.includes('Source:'))
+  })
+
+  it('keeps pages under any of several prefixes', () => {
+    const pages = parseLlmsFull(SAMPLE, ['https://example.com/docs', 'https://example.com/blog'])
+    assert.deepEqual(pages.map((p) => p.url), ['https://example.com/docs/quickstart', 'https://example.com/blog/post'])
   })
 
   it('keeps every page without a prefix', () => {
@@ -37,7 +42,7 @@ describe('parseLlmsFull', () => {
 
 describe('chunkPage', () => {
   it('splits at section headings and labels each passage with its page and section', () => {
-    const [page] = parseLlmsFull(SAMPLE, 'https://example.com/docs')
+    const [page] = parseLlmsFull(SAMPLE, ['https://example.com/docs'])
     const passages = chunkPage(page)
     assert.deepEqual(passages.map((p) => p.heading), ['Quickstart', 'Quickstart > Send a request'])
     assert.equal(passages[1].text, 'Point the client at the base URL.')

@@ -21,7 +21,8 @@ export interface Passage {
   text: string
 }
 
-export function parseLlmsFull(raw: string, urlPrefix = ''): DocPage[] {
+/** Pages whose Source URL starts with one of `urlPrefixes` (all pages when there are none). */
+export function parseLlmsFull(raw: string, urlPrefixes: string[] = []): DocPage[] {
   const pages: DocPage[] = []
   const blocks = raw.split(/^## (?!#)/m).slice(1)
   for (const block of blocks) {
@@ -31,7 +32,7 @@ export function parseLlmsFull(raw: string, urlPrefix = ''): DocPage[] {
     const source = /^Source:\s*(\S+)\s*$/m.exec(rest)
     if (!title || !source) continue
     const url = source[1]
-    if (urlPrefix && !url.startsWith(urlPrefix)) continue
+    if (urlPrefixes.length && !urlPrefixes.some((prefix) => url.startsWith(prefix))) continue
     const text = rest.replace(source[0], '').trim()
     if (text) pages.push({ title, url, text })
   }
