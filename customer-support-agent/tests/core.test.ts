@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { isGuardrailRefusal, readChunk } from '../lib/events'
 import { checkLimits, MemoryLimiter } from '../lib/rate-limit'
+import { queryText } from '../lib/retrieval'
 import { validateTurns } from '../lib/validate'
 import { normalize, topK } from '../lib/vector'
 
@@ -53,5 +54,13 @@ describe('isGuardrailRefusal', () => {
     assert.equal(isGuardrailRefusal(403, 'The input was refused by the guardrail: it looks like a prompt injection.'), true)
     assert.equal(isGuardrailRefusal(403, "Model 'x' is not in this key's model pool"), false)
     assert.equal(isGuardrailRefusal(500, 'guardrail provider failed'), false)
+  })
+})
+
+describe('queryText', () => {
+  it('puts the task in front of a question for Qwen3-Embedding, and leaves other models alone', () => {
+    const q = 'Do you train on my data?'
+    assert.match(queryText('qwen3-embedding-0-6b', q), /^Instruct: .+\nQuery: Do you train on my data\?$/)
+    assert.equal(queryText('text-embedding-3-small', q), q)
   })
 })

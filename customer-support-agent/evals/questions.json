@@ -256,5 +256,27 @@
       "not used",
       "no."
     ]
+  },
+  {
+    "question": "Do you train on my data?",
+    "expect_pages": [
+      "/docs/organization-and-account/security-and-privacy-policies"
+    ],
+    "expect_any": [
+      "does not use",
+      "not use",
+      "no."
+    ]
+  },
+  {
+    "question": "Do you use my prompts for training?",
+    "expect_pages": [
+      "/docs/organization-and-account/security-and-privacy-policies"
+    ],
+    "expect_any": [
+      "does not use",
+      "not use",
+      "no."
+    ]
   }
 ]

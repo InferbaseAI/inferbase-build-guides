@@ -37,10 +37,24 @@ export function loadIndex(): DocsIndex {
   return cached
 }
 
+/**
+ * The text embedded for a question. Instruction-tuned embedding models expect a query to carry
+ * the task in front of it, while passages are embedded bare: Qwen3-Embedding's model card asks
+ * for `Instruct: <task>\nQuery: <question>`, and without it short questions drift toward any
+ * passage that shares a word ("Do you train on my data?" found the catalog's "training cutoff"
+ * fields instead of the privacy section). Other models get the question as is.
+ */
+export function queryText(model: string, question: string): string {
+  if (/qwen3-embedding/i.test(model)) {
+    return `Instruct: Given a question about a product, retrieve documentation passages that answer it\nQuery: ${question}`
+  }
+  return question
+}
+
 /** The passages most relevant to `question`, numbered for citation as [1], [2], ... */
 export async function retrieve(question: string, k: number): Promise<{ passages: IndexedPassage[]; sources: Source[] }> {
   const index = loadIndex()
-  const response = await inferbase().embeddings.create({ model: index.model, input: question })
+  const response = await inferbase().embeddings.create({ model: index.model, input: queryText(index.model, question) })
   const query = normalize(response.data[0].embedding)
   const hits = topK(
     query,
