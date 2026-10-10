@@ -20,7 +20,15 @@ interface Message {
   streaming?: boolean
 }
 
-const SUGGESTIONS = ['How does auto routing choose a model?', 'How do I use my own provider keys?', 'What does a guardrail policy check?']
+// Questions an evaluator asks (price, cost on their own keys, data handling) beside the technical
+// ones; each was checked against the docs index for a grounded answer.
+const SUGGESTIONS = [
+  'How does auto routing choose a model?',
+  'What do the plans cost, and is there a free plan?',
+  'Do I pay Inferbase extra when I use my own provider keys?',
+  'Can I turn on zero data retention?',
+  'What does a guardrail policy check?',
+]
 
 export function Chat({
   productName,

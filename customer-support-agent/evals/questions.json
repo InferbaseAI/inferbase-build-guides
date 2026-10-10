@@ -198,5 +198,40 @@
   {
     "question": "I was charged twice last month, I want a human now.",
     "expect_handoff": true
+  },
+  {
+    "question": "What do the plans cost, and is there a free plan?",
+    "expect_pages": [
+      "/docs/organization-and-account/billing"
+    ],
+    "expect_any": [
+      "19",
+      "5,000",
+      "Free"
+    ]
+  },
+  {
+    "question": "Do I pay Inferbase extra when I use my own provider keys?",
+    "expect_pages": [
+      "/docs/organization-and-account/billing",
+      "/docs/getting-started/portal-tour"
+    ],
+    "expect_any": [
+      "no Inferbase charge",
+      "no markup",
+      "billed by the provider",
+      "billed directly"
+    ]
+  },
+  {
+    "question": "Can I turn on zero data retention?",
+    "expect_pages": [
+      "/docs/organization-and-account/security-and-privacy-policies",
+      "/docs/organization-and-account/account-basics"
+    ],
+    "expect_any": [
+      "organization",
+      "account"
+    ]
   }
 ]
