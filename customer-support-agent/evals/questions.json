@@ -233,5 +233,28 @@
       "organization",
       "account"
     ]
+  },
+  {
+    "question": "Does Inferbase store my prompts and responses?",
+    "expect_pages": [
+      "/docs/organization-and-account/security-and-privacy-policies",
+      "/docs/api/responses",
+      "/docs/organization-and-account/account-basics",
+      "/docs/gateway/api-keys"
+    ],
+    "expect_any": [
+      "30"
+    ]
+  },
+  {
+    "question": "Is my data used to train models?",
+    "expect_pages": [
+      "/docs/organization-and-account/security-and-privacy-policies"
+    ],
+    "expect_any": [
+      "does not use",
+      "not used",
+      "no."
+    ]
   }
 ]
