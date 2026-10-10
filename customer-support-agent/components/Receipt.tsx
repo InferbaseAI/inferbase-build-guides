@@ -14,18 +14,12 @@ function seconds(ms?: number): string | null {
   return ms === undefined ? null : `${(ms / 1000).toFixed(1)} s`
 }
 
-/** Shorten a catalog id for the summary line: "novita/minimax/minimax-m3" -> "minimax-m3". */
-function shortModel(model?: string): string | null {
-  return model ? (model.split('/').pop() ?? model) : null
-}
-
 /**
- * Under each answer: one line saying which model answered, how fast and for how much, and the
- * pages it drew on. "Details" opens the routing decision Inferbase streamed with the answer.
+ * Under each answer: the pages it drew on, and "How this was answered", which opens the routing
+ * decision Inferbase streamed with the answer (the model, why, how fast and for how much).
  */
 export function Receipt({ sources, routing, usage }: { sources: Source[]; routing?: RoutingReceipt; usage?: UsageReceipt }) {
   const [open, setOpen] = useState(false)
-  const summary = [shortModel(routing?.model), seconds(usage?.latency_ms), money(usage?.cost_micros)].filter(Boolean)
   const pages = sources.filter((s, i) => sources.findIndex((x) => x.url === s.url) === i)
 
   const facts: [string, string][] = []
@@ -35,20 +29,19 @@ export function Receipt({ sources, routing, usage }: { sources: Source[]; routin
   if (routing?.forced_single) facts.push(['Choice', 'only one model qualified'])
   else if (typeof routing?.decisiveness === 'number') facts.push(['Margin', `${Math.round(routing.decisiveness * 100)}% over the next model`])
   if (routing?.routing_time_ms !== undefined) facts.push(['Routing time', `${routing.routing_time_ms} ms`])
+  if (usage?.latency_ms !== undefined) facts.push(['Latency', seconds(usage.latency_ms) ?? ''])
   if (usage?.ttft_ms !== undefined) facts.push(['First token', seconds(usage.ttft_ms) ?? ''])
+  if (usage?.cost_micros !== undefined) facts.push(['Cost', money(usage.cost_micros) ?? ''])
   if (usage?.prompt_tokens !== undefined) facts.push(['Tokens', `${usage.prompt_tokens} in, ${usage.completion_tokens ?? 0} out`])
 
-  if (!summary.length && !pages.length) return null
+  if (!facts.length && !pages.length) return null
   return (
     <div className="mt-2 text-xs text-muted-foreground">
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        {summary.length > 0 && <span className="font-mono">{summary.join(' · ')}</span>}
-        {facts.length > 0 && (
-          <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} className="underline-offset-2 hover:text-foreground hover:underline">
-            {open ? 'Hide details' : 'How this was answered'}
-          </button>
-        )}
-      </div>
+      {facts.length > 0 && (
+        <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} className="underline-offset-2 hover:text-foreground hover:underline">
+          {open ? 'Hide details' : 'How this was answered'}
+        </button>
+      )}
       {pages.length > 0 && (
         <div className="mt-1.5 flex flex-wrap gap-1.5">
           {pages.slice(0, 4).map((s) => (
