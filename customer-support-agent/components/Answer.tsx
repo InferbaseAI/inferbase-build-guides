@@ -4,8 +4,10 @@ import { normalizeCitations } from '@/lib/citations'
 
 /**
  * The small slice of markdown support answers use: code fences, bullet and numbered lists,
- * headings, paragraphs; inline code, bold, italic, links and [n] citations. Kept dependency-free
- * and readable; swap in a markdown library if your answers need tables or more.
+ * tables, headings, paragraphs; inline code, bold, italic, links and [n] citations. Kept
+ * dependency-free and readable; swap in a markdown library if your answers need more. Tables are
+ * here because a model answering from passages that hold tables (a comparison) writes one, and
+ * unrendered it reached visitors as a run of pipes.
  */
 export function Answer({ text, sources }: { text: string; sources: Source[] }) {
   const parts = normalizeCitations(text).split(/```[a-zA-Z0-9_-]*\n?/)
@@ -44,6 +46,46 @@ function Blocks({ text, sources }: { text: string; sources: Source[] }) {
       i++
       continue
     }
+    if (isTableRow(line)) {
+      const rows: string[][] = []
+      while (i < lines.length && isTableRow(lines[i])) {
+        rows.push(cells(lines[i]))
+        i++
+      }
+      // A header row is the one a separator row (|---|---|) follows; the separator is not shown.
+      const hasHeader = rows.length > 1 && rows[1].every((c) => /^:?-{2,}:?$/.test(c))
+      const head = hasHeader ? rows[0] : null
+      const body = rows.filter((row, j) => !(hasHeader && j <= 1))
+      blocks.push(
+        <div key={i} className="overflow-x-auto rounded-md border border-border">
+          <table className="w-full border-collapse text-left text-xs">
+            {head && (
+              <thead className="bg-muted">
+                <tr>
+                  {head.map((c, j) => (
+                    <th key={j} className="px-2.5 py-1.5 font-medium">
+                      {inline(c, sources, `t${i}-h${j}`)}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+            )}
+            <tbody>
+              {body.map((row, r) => (
+                <tr key={r} className="border-t border-border align-top">
+                  {row.map((c, j) => (
+                    <td key={j} className="px-2.5 py-1.5">
+                      {inline(c, sources, `t${i}-${r}-${j}`)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>,
+      )
+      continue
+    }
     const listMatch = /^\s*([-*]|\d+[.)])\s+/.exec(line)
     if (listMatch) {
       const ordered = /\d/.test(listMatch[1])
@@ -63,13 +105,31 @@ function Blocks({ text, sources }: { text: string; sources: Source[] }) {
       continue
     }
     const paragraph: string[] = []
-    while (i < lines.length && lines[i].trim() && !/^\s*([-*]|\d+[.)])\s+/.test(lines[i]) && !/^#{1,6}\s/.test(lines[i])) {
+    while (
+      i < lines.length &&
+      lines[i].trim() &&
+      !/^\s*([-*]|\d+[.)])\s+/.test(lines[i]) &&
+      !/^#{1,6}\s/.test(lines[i]) &&
+      !isTableRow(lines[i])
+    ) {
       paragraph.push(lines[i])
       i++
     }
     blocks.push(<p key={i}>{inline(paragraph.join(' '), sources, `p${i}`)}</p>)
   }
   return <>{blocks}</>
+}
+
+function isTableRow(line: string): boolean {
+  return /^\s*\|.*\|\s*$/.test(line)
+}
+
+function cells(line: string): string[] {
+  return line
+    .trim()
+    .replace(/^\||\|$/g, '')
+    .split('|')
+    .map((c) => c.trim())
 }
 
 const INLINE = /(`[^`\n]+`|\*\*[^*\n]+\*\*|\*[^*\s][^*\n]*\*|\[[^\]\n]+\]\(https?:\/\/[^)\s]+\)|\[\d+\])/
