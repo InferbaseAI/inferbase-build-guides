@@ -32,6 +32,7 @@ export interface UsageReceipt {
 }
 
 export type ChatEvent =
+  | { type: 'session'; token: string }
   | { type: 'sources'; sources: Source[] }
   | { type: 'routing'; routing: RoutingReceipt }
   | { type: 'delta'; text: string }

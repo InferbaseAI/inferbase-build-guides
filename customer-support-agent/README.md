@@ -19,8 +19,9 @@ One API key. No vector database, no cloud console, no model list to maintain.
   the model ends its answer with a marker and the chat opens a form that emails the conversation to
   your support inbox, with the visitor as the reply-to.
 - **Safe to put on a public site.** Per-visitor rate limits, an optional Cloudflare Turnstile check
-  on the first message, length limits, short answers, and the guardrails and daily spend cap you
-  set on the API key in Inferbase.
+  (passing it earns a signed one-hour session, and every message and handoff must carry one, so a
+  bot cannot skip it by sending a made-up conversation), length limits, short answers, and the
+  guardrails and daily spend cap you set on the API key in Inferbase.
 - **Embeds anywhere.** One script tag adds a launcher to your site; the chat runs in a frame on its
   own origin.
 

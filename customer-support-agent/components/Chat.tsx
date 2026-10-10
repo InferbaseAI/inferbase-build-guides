@@ -38,10 +38,22 @@ export function Chat({
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
+  // The bot check. A session (from the chat route) covers every request until it expires; the
+  // widget stays mounted so a fresh token is on hand when it does, and is reset once one is spent.
+  const [session, setSession] = useState<string | null>(null)
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
+  const [checkKey, setCheckKey] = useState(0)
   const [handoffOpen, setHandoffOpen] = useState(false)
   const bottom = useRef<HTMLDivElement>(null)
   const onToken = useCallback((token: string | null) => setTurnstileToken(token), [])
+  const resetCheck = useCallback(() => {
+    setTurnstileToken(null)
+    setCheckKey((k) => k + 1)
+  }, [])
+  const onVerifyRequired = useCallback(() => {
+    setSession(null)
+    resetCheck()
+  }, [resetCheck])
 
   useEffect(() => {
     bottom.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
@@ -66,10 +78,14 @@ export function Chat({
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: history, turnstileToken }),
+        body: JSON.stringify({ messages: history, session, turnstileToken }),
       })
       if (!response.ok || !response.body) {
-        const body = (await response.json().catch(() => ({}))) as { error?: string }
+        const body = (await response.json().catch(() => ({}))) as { error?: string; code?: string }
+        if (body.code === 'verify') {
+          onVerifyRequired()
+          setInput(text)
+        }
         update((m) => ({ ...m, streaming: false, error: body.error ?? 'Something went wrong. Please try again.' }))
         return
       }
@@ -87,6 +103,11 @@ export function Chat({
           if (!line) continue
           const event = JSON.parse(line) as ChatEvent
           if (event.type === 'delta') answer += event.text
+          if (event.type === 'session') {
+            // The token was spent on this check; the session covers what follows.
+            setSession(event.token)
+            resetCheck()
+          }
           apply(event, update)
         }
       }
@@ -100,7 +121,7 @@ export function Chat({
     }
   }
 
-  const needsCheck = Boolean(turnstileSiteKey) && messages.length === 0 && !turnstileToken
+  const needsCheck = Boolean(turnstileSiteKey) && !session && !turnstileToken
   const title = `${productName} ${assistantName}`
 
   function reset() {
@@ -173,7 +194,16 @@ export function Chat({
             </div>
           ),
         )}
-        {handoffOpen && <HandoffForm turns={turns} turnstileToken={turnstileToken} onClose={() => setHandoffOpen(false)} />}
+        {handoffOpen && (
+          <HandoffForm
+            turns={turns}
+            proof={{ session, turnstileToken }}
+            needsCheck={needsCheck}
+            onProofUsed={resetCheck}
+            onVerifyRequired={onVerifyRequired}
+            onClose={() => setHandoffOpen(false)}
+          />
+        )}
         <div ref={bottom} />
       </div>
 
@@ -184,7 +214,7 @@ export function Chat({
         }}
         className={`border-t border-border pb-3 pt-3 ${embedded ? 'px-4' : 'px-4 sm:px-6'}`}
       >
-        {turnstileSiteKey && messages.length === 0 && <Turnstile siteKey={turnstileSiteKey} onToken={onToken} />}
+        {turnstileSiteKey && <Turnstile key={checkKey} siteKey={turnstileSiteKey} onToken={onToken} />}
         <div className="flex items-end gap-2 rounded-lg border border-border bg-background p-1.5 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/15">
           <textarea
             value={input}
@@ -268,6 +298,7 @@ function apply(event: ChatEvent, update: (patch: (m: Message) => Message) => voi
     case 'error':
       update((m) => ({ ...m, error: event.message }))
       break
+    case 'session':
     case 'done':
       break
   }

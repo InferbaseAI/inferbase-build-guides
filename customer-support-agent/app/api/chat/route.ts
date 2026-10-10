@@ -5,7 +5,7 @@ import { inferbase } from '@/lib/inferbase'
 import { systemPrompt } from '@/lib/prompt'
 import { checkLimits, MemoryLimiter, visitorAddress } from '@/lib/rate-limit'
 import { retrieve } from '@/lib/retrieval'
-import { verifyTurnstile } from '@/lib/turnstile'
+import { checkVisitor, VERIFY_REQUIRED } from '@/lib/turnstile'
 import { validateTurns } from '@/lib/validate'
 
 export const runtime = 'nodejs'
@@ -23,7 +23,7 @@ function refuse(status: number, message: string, headers: Record<string, string>
  */
 export async function POST(request: Request): Promise<Response> {
   const ip = visitorAddress(request.headers)
-  let body: { messages?: unknown; turnstileToken?: string }
+  let body: { messages?: unknown; turnstileToken?: unknown; session?: unknown }
   try {
     body = await request.json()
   } catch {
@@ -36,12 +36,9 @@ export async function POST(request: Request): Promise<Response> {
   const limit = checkLimits(limiter, ip, { perMinute: config.ratePerMinute, perDay: config.ratePerDay })
   if (!limit.ok) return refuse(429, limit.message, { 'Retry-After': String(limit.retryAfterSeconds) })
 
-  // A bot check on the first message of a session; later messages ride on it.
-  if (config.turnstileSecret && valid.turns.length === 1) {
-    if (!(await verifyTurnstile(config.turnstileSecret, body.turnstileToken, ip))) {
-      return refuse(403, 'Please complete the check and send your message again.')
-    }
-  }
+  // The bot check: every message carries a session from an earlier check or a fresh token.
+  const visitor = await checkVisitor(config.turnstileSecret, body, ip)
+  if (!visitor.ok) return Response.json(VERIFY_REQUIRED, { status: 403 })
 
   // Search with the latest question plus the one before it, so a follow-up ("how do I set it?")
   // still finds the page the conversation is about.
@@ -51,6 +48,7 @@ export async function POST(request: Request): Promise<Response> {
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       const send = (event: ChatEvent) => controller.enqueue(encodeEvent(event))
+      if (visitor.session) send({ type: 'session', token: visitor.session })
       try {
         const { passages, sources } = await retrieve(query, config.retrieval.topK)
         send({ type: 'sources', sources })

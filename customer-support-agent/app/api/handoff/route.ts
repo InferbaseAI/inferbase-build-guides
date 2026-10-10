@@ -1,6 +1,6 @@
 import { config } from '@/lib/config'
 import { checkLimits, MemoryLimiter, visitorAddress } from '@/lib/rate-limit'
-import { verifyTurnstile } from '@/lib/turnstile'
+import { checkVisitor, VERIFY_REQUIRED } from '@/lib/turnstile'
 import { validateTurns } from '@/lib/validate'
 
 export const runtime = 'nodejs'
@@ -17,7 +17,7 @@ export async function POST(request: Request): Promise<Response> {
   const limit = checkLimits(limiter, ip, { perMinute: 2, perDay: 5 })
   if (!limit.ok) return Response.json({ error: limit.message }, { status: 429 })
 
-  let body: { email?: unknown; note?: unknown; messages?: unknown; turnstileToken?: string }
+  let body: { email?: unknown; note?: unknown; messages?: unknown; turnstileToken?: unknown; session?: unknown }
   try {
     body = await request.json()
   } catch {
@@ -31,8 +31,8 @@ export async function POST(request: Request): Promise<Response> {
   const valid = validateTurns(body.messages, { maxChars: config.maxMessageChars, maxTurns: config.maxTurns + 1 })
   const transcript = valid.ok ? valid.turns : []
 
-  if (config.turnstileSecret && !(await verifyTurnstile(config.turnstileSecret, body.turnstileToken, ip))) {
-    return Response.json({ error: 'Please complete the check and try again.' }, { status: 403 })
+  if (!(await checkVisitor(config.turnstileSecret, body, ip)).ok) {
+    return Response.json({ ...VERIFY_REQUIRED, error: 'Please complete the check and try again.' }, { status: 403 })
   }
 
   const text = [
