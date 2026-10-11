@@ -95,6 +95,17 @@
     ]
   },
   {
+    "question": "What API formats do you support?",
+    "expect_pages": [
+      "/docs/api",
+      "/docs/gateway/client-compatibility"
+    ],
+    "expect_any": [
+      "Responses",
+      "Messages"
+    ]
+  },
+  {
     "question": "How are API errors returned?",
     "expect_pages": [
       "/docs/api/errors"
