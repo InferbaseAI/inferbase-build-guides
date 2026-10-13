@@ -15,7 +15,7 @@ import { normalize } from '../lib/vector'
 
 const SOURCE = process.env.DOCS_SOURCE_URL || 'https://inferbase.ai/llms-full.txt'
 // Which pages of the file to index, by Source URL; comma-separated. Empty indexes every page.
-const PREFIXES = (process.env.DOCS_SOURCE_PREFIX ?? 'https://inferbase.ai/docs,https://inferbase.ai/compare')
+const PREFIXES = (process.env.DOCS_SOURCE_PREFIX ?? 'https://inferbase.ai/docs,https://inferbase.ai/compare,https://inferbase.ai/solutions')
   .split(',')
   .map((p) => p.trim())
   .filter(Boolean)
