@@ -20,7 +20,9 @@ const PREFIXES = (process.env.DOCS_SOURCE_PREFIX ?? 'https://inferbase.ai/docs,h
   .map((p) => p.trim())
   .filter(Boolean)
 const MODEL = process.env.EMBEDDING_MODEL || 'auto'
-const BATCH = 64
+// Passages per embeddings call. Smaller batches give a key's input guardrail less to inspect per
+// call; a guardrail that cannot reach a verdict on a large batch refuses it.
+const BATCH = Number(process.env.INDEX_BATCH || 64)
 
 async function main() {
   const response = await fetch(SOURCE)

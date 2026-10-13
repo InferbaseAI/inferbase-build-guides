@@ -30,7 +30,8 @@
     "expect_any": [
       "provider key",
       "own key",
-      "your own"
+      "your own",
+      "BYOK"
     ]
   },
   {
@@ -231,7 +232,9 @@
       "no Inferbase charge",
       "no markup",
       "billed by the provider",
-      "billed directly"
+      "billed directly",
+      "bills you directly",
+      "markup"
     ]
   },
   {
@@ -346,6 +349,29 @@
     "expect_any": [
       "no published comparison",
       "inferbase.ai/compare"
+    ]
+  },
+  {
+    "question": "Can I build a real-time phone agent with Inferbase?",
+    "expect_pages": [
+      "/solutions/voice-agent",
+      "/solutions/industries/customer-operations"
+    ],
+    "expect_any": [
+      "turn-based",
+      "turn",
+      "seconds"
+    ]
+  },
+  {
+    "question": "How do I build RAG over my knowledge base with Inferbase?",
+    "expect_pages": [
+      "/solutions/rag-knowledge-base"
+    ],
+    "expect_any": [
+      "retrieval",
+      "passages",
+      "auto"
     ]
   }
 ]
