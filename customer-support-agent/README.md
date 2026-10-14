@@ -90,7 +90,8 @@ window.addEventListener('message', async (event) => {
   if (event.origin !== ASSISTANT_ORIGIN || event.source !== frame.contentWindow) return
   if (event.data?.type !== 'inferbase:ready') return
   const { token, expires_at } = await mintReadOnlyToken() // POST /api/v1/users/access-tokens/read-only, as the signed-in person
-  frame.contentWindow.postMessage({ type: 'inferbase:token', token, expires_at }, ASSISTANT_ORIGIN)
+  // first_name is optional: the greeting uses it ("Hi Vishal") and nothing else does.
+  frame.contentWindow.postMessage({ type: 'inferbase:token', token, expires_at, first_name }, ASSISTANT_ORIGIN)
 })
 ```
 

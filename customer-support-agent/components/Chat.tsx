@@ -188,7 +188,9 @@ export function Chat({
             <div className="flex gap-3">
               <Mark small />
               <div className="space-y-1">
-                <p className="font-medium">Hi, I am the {title}.</p>
+                <p className="font-medium">
+                  Hi{signedIn && account.firstName ? ` ${account.firstName}` : ''}, I am the {title}.
+                </p>
                 <p className="text-muted-foreground">
                   {signedIn
                     ? `Ask me about ${productName} or your own account: requests, errors, spend, keys, connections, policies. I can look things up but cannot change anything.`

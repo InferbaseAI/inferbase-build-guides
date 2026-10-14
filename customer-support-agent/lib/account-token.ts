@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
  * Account mode's side of the token handshake with the portal that frames this app.
  *
  *   frame  -> portal   { type: 'inferbase:ready' }          on load, and again when a token is due
- *   portal -> frame    { type: 'inferbase:token', token, expires_at }
+ *   portal -> frame    { type: 'inferbase:token', token, expires_at, first_name? }
  *
  * The portal mints the token from the person's own signed-in session and posts it to this frame only.
  * Messages are sent to, and accepted from, the configured portal origins only (never '*'), and only
@@ -23,8 +23,13 @@ interface Held {
   expiresAt: number
 }
 
+/** The longest first name the greeting shows; anything longer is not a first name. */
+const NAME_MAX = 40
+
 export function useAccountToken(parentOrigins: string[]) {
   const [held, setHeld] = useState<Held | null>(null)
+  // Who is signed in, for the greeting only ("Hi Vishal"): never sent anywhere.
+  const [firstName, setFirstName] = useState('')
   const origins = useRef(parentOrigins)
   const enabled = parentOrigins.length > 0
 
@@ -38,10 +43,12 @@ export function useAccountToken(parentOrigins: string[]) {
     if (!enabled) return
     const onMessage = (event: MessageEvent) => {
       if (event.source !== window.parent || !origins.current.includes(event.origin)) return
-      const data = event.data as { type?: unknown; token?: unknown; expires_at?: unknown } | null
+      const data = event.data as { type?: unknown; token?: unknown; expires_at?: unknown; first_name?: unknown } | null
       if (data?.type !== TOKEN || typeof data.token !== 'string' || typeof data.expires_at !== 'string') return
       const expiresAt = Date.parse(data.expires_at)
       if (Number.isFinite(expiresAt)) setHeld({ token: data.token, expiresAt })
+      const name = typeof data.first_name === 'string' ? data.first_name.trim() : ''
+      setFirstName(name.length <= NAME_MAX ? name : '')
     }
     window.addEventListener('message', onMessage)
     ask()
@@ -63,5 +70,5 @@ export function useAccountToken(parentOrigins: string[]) {
 
   // A token that lapsed anyway (a sleeping tab skips timers) is refused by the API, which ends in
   // `expired` above; nothing here reads the clock during render.
-  return { enabled, token: held?.token ?? null, expired }
+  return { enabled, token: held?.token ?? null, firstName, expired }
 }
