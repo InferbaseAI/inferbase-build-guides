@@ -73,6 +73,8 @@ export function Chat({
   const bottom = useRef<HTMLDivElement>(null)
   const account = useAccountToken(parentOrigins)
   const signedIn = account.enabled && account.token !== null
+  // Account mode, before the portal has answered: show neither face yet (see useAccountToken).
+  const waiting = account.waiting && !signedIn
   const onToken = useCallback((token: string | null) => setTurnstileToken(token), [])
   const resetCheck = useCallback(() => {
     setTurnstileToken(null)
@@ -102,7 +104,7 @@ export function Chat({
 
   async function ask(question: string) {
     const text = question.trim()
-    if (!text || busy) return
+    if (!text || busy || waiting) return
     const history: ChatTurn[] = [...turns, { role: 'user', content: text }]
     setMessages((prev) => [...prev.filter((m) => !m.error), { role: 'user', content: text }, { role: 'assistant', content: '', streaming: true }])
     setInput('')
@@ -179,7 +181,7 @@ export function Chat({
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-sm font-semibold">{title}</h1>
           <p className="truncate text-xs text-muted-foreground">
-            {signedIn ? 'Answers from the documentation and your account' : `Answers from the ${productName} documentation`}
+            {waiting ? '\u00a0' : signedIn ? 'Answers from the documentation and your account' : `Answers from the ${productName} documentation`}
           </p>
         </div>
         {messages.length > 0 && (
@@ -208,7 +210,17 @@ export function Chat({
       </header>
 
       <div className={`flex-1 space-y-5 overflow-y-auto py-5 text-sm ${embedded ? 'px-4' : 'px-4 sm:px-6'}`} aria-live="polite">
-        {messages.length === 0 && (
+        {messages.length === 0 && waiting && (
+          <div className="flex gap-3" aria-busy="true">
+            <Mark small />
+            <div className="flex-1 space-y-2 pt-1.5">
+              <span className="block h-3.5 w-2/3 animate-pulse rounded bg-muted" />
+              <span className="block h-3 w-full animate-pulse rounded bg-muted" />
+              <span className="block h-3 w-4/5 animate-pulse rounded bg-muted" />
+            </div>
+          </div>
+        )}
+        {messages.length === 0 && !waiting && (
           <div className="space-y-4">
             <div className="flex gap-3">
               <Mark small />
@@ -301,7 +313,7 @@ export function Chat({
           />
           <button
             type="submit"
-            disabled={busy || !input.trim() || needsCheck}
+            disabled={busy || waiting || !input.trim() || needsCheck}
             aria-label="Send"
             className="inline-flex size-8 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground transition-opacity disabled:opacity-40"
           >
@@ -311,7 +323,7 @@ export function Chat({
           </button>
         </div>
         <p className="mt-2 text-center text-[11px] text-muted-foreground">
-          Answers are generated and can be wrong. Routed by{' '}
+          Answers are generated and can be wrong. Powered by{' '}
           <a href="https://inferbase.ai" target="_blank" rel="noreferrer" className="underline-offset-2 hover:underline">
             Inferbase
           </a>
@@ -322,17 +334,27 @@ export function Chat({
   )
 }
 
-/** The assistant's mark: a rounded square, so it reads as the product, not a person. */
+/** The assistant's mark: a robot dog (floppy ears, an antenna, square eyes) on a brand-blue tile. */
 function Mark({ small = false }: { small?: boolean }) {
   return (
     <span
       aria-hidden="true"
-      className={`inline-flex shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary ${small ? 'size-7' : 'size-8'}`}
+      className={`inline-flex shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground ${small ? 'size-7' : 'size-8'}`}
     >
-      <svg viewBox="0 0 16 16" className={small ? 'size-3.5' : 'size-4'} fill="currentColor">
-        <path d="M8 1.5 9.6 6.4 14.5 8 9.6 9.6 8 14.5 6.4 9.6 1.5 8 6.4 6.4Z" />
-      </svg>
+      <RoboDog className={small ? 'size-[18px]' : 'size-5'} />
     </span>
+  )
+}
+
+function RoboDog({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2.5v3" />
+      <rect x="5.5" y="5.5" width="13" height="14" rx="5" />
+      <path d="M5.5 9C3 9 2.5 12.5 3.5 15.5M18.5 9c2.5 0 3 3.5 2 6.5M10.5 16h3" />
+      <rect x="8.3" y="10" width="3" height="3" rx="0.7" fill="currentColor" stroke="none" />
+      <rect x="12.7" y="10" width="3" height="3" rx="0.7" fill="currentColor" stroke="none" />
+    </svg>
   )
 }
 
