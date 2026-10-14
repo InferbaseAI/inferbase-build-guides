@@ -31,6 +31,10 @@ export async function answer(options: {
     ...options.turns,
   ]
   let usage: UsageReceipt | undefined
+  // A model that reasons whatever it is asked can stream its thinking and stop with nothing to show
+  // (MiniMax-M3 on Together, 2026-10-15): once anything is streamed, the API cannot fall back, so an
+  // empty round is asked again here, once.
+  let retried = false
 
   for (let round = 0; ; round++) {
     const withTools = account !== null && round < config.maxToolRounds
@@ -44,6 +48,7 @@ export async function answer(options: {
     })
     const calls = new Map<number, ToolCall>()
     let text = ''
+    let failed = false
     for await (const chunk of completion) {
       collectToolCalls(calls, chunk)
       const event = readChunk(chunk)
@@ -51,8 +56,17 @@ export async function answer(options: {
       if (event.type === 'usage') usage = addUsage(usage, event.usage)
       else {
         if (event.type === 'delta') text += event.text
+        if (event.type === 'error') failed = true
         send(event)
       }
+    }
+    if (calls.size === 0 && !text.trim() && !failed) {
+      if (!retried) {
+        retried = true
+        continue
+      }
+      send({ type: 'error', message: 'The assistant could not answer just now. Please try again.' })
+      break
     }
     if (!account || calls.size === 0) break
 

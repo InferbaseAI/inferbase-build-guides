@@ -6,3 +6,8 @@
 export function normalizeCitations(text: string): string {
   return text.replace(/【(\d+)(?:†[^】]*)?】/g, '[$1]')
 }
+
+/** The passage numbers an answer cites (`[2]`, `[1][3]`, or a model's native form). */
+export function citedNumbers(text: string): Set<number> {
+  return new Set([...normalizeCitations(text).matchAll(/\[(\d+)\]/g)].map((m) => Number(m[1])))
+}

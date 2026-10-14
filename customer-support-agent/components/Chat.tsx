@@ -46,6 +46,7 @@ export function Chat({
   productName,
   assistantName,
   embedded,
+  closable = false,
   parentOrigins,
   handoffEnabled,
   turnstileSiteKey,
@@ -53,6 +54,8 @@ export function Chat({
   productName: string
   assistantName: string
   embedded: boolean
+  /** Draw a close button that asks the framing page to close the frame (`inferbase:close`). */
+  closable?: boolean
   /** Account mode when non-empty: the portal origins allowed to hand this frame a read-only token. */
   parentOrigins: string[]
   handoffEnabled: boolean
@@ -79,6 +82,15 @@ export function Chat({
     setSession(null)
     resetCheck()
   }, [resetCheck])
+
+  // A close request carries no data, so it may go to whichever page framed us; that page decides.
+  const close = useCallback(() => window.parent.postMessage({ type: 'inferbase:close' }, '*'), [])
+  useEffect(() => {
+    if (!closable) return
+    const onKey = (event: KeyboardEvent) => event.key === 'Escape' && close()
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [closable, close])
 
   useEffect(() => {
     bottom.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
@@ -180,6 +192,19 @@ export function Chat({
             Contact support
           </button>
         )}
+        {closable && (
+          <button
+            type="button"
+            onClick={close}
+            aria-label="Close"
+            title="Close"
+            className="inline-flex size-7 items-center justify-center rounded-md border border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
+            <svg viewBox="0 0 16 16" className="size-3.5" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+              <path d="M4 4l8 8M12 4l-8 8" strokeLinecap="round" />
+            </svg>
+          </button>
+        )}
       </header>
 
       <div className={`flex-1 space-y-5 overflow-y-auto py-5 text-sm ${embedded ? 'px-4' : 'px-4 sm:px-6'}`} aria-live="polite">
@@ -227,7 +252,7 @@ export function Chat({
                 )}
                 {m.content ? <Answer text={m.content.replace(HANDOFF_MARKER, '')} sources={m.sources ?? []} /> : m.streaming && <Typing />}
                 {m.error && <p className="rounded-md border border-danger/30 bg-danger/5 px-3 py-2 text-danger">{m.error}</p>}
-                {!m.streaming && !m.error && <Receipt sources={m.sources ?? []} routing={m.routing} usage={m.usage} />}
+                {!m.streaming && !m.error && <Receipt text={m.content} sources={m.sources ?? []} routing={m.routing} usage={m.usage} />}
               </div>
             </div>
           ),
@@ -252,7 +277,9 @@ export function Chat({
         }}
         className={`border-t border-border pb-3 pt-3 ${embedded ? 'px-4' : 'px-4 sm:px-6'}`}
       >
-        {turnstileSiteKey && <Turnstile key={checkKey} siteKey={turnstileSiteKey} onToken={onToken} />}
+        {turnstileSiteKey && (
+          <Turnstile key={checkKey} siteKey={turnstileSiteKey} onToken={onToken} hidden={Boolean(session || turnstileToken)} />
+        )}
         <div className="flex items-end gap-2 rounded-lg border border-border bg-background p-1.5 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/15">
           <textarea
             value={input}

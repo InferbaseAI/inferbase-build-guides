@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { normalizeCitations } from '../lib/citations'
+import { citedNumbers, normalizeCitations } from '../lib/citations'
 import { isGuardrailRefusal, readChunk } from '../lib/events'
 import { checkLimits, MemoryLimiter } from '../lib/rate-limit'
 import { queryText } from '../lib/retrieval'
@@ -76,5 +76,12 @@ describe('normalizeCitations', () => {
   it('turns a model\'s native citations into [n], and leaves [n] and other brackets alone', () => {
     assert.equal(normalizeCitations('Yes【1†L1-L4】【5†L2】. No【2】.'), 'Yes[1][5]. No[2].')
     assert.equal(normalizeCitations('Already [3], and 【a note】.'), 'Already [3], and 【a note】.')
+  })
+})
+
+describe('citedNumbers: only the pages an answer cites are listed under it', () => {
+  it('reads [n] runs and native citations, and nothing from a refusal', () => {
+    assert.deepEqual([...citedNumbers('Routing picks per request [1][3]. See also 【2†L4】.')].sort(), [1, 2, 3])
+    assert.equal(citedNumbers('I can only help with questions about Inferbase.').size, 0)
   })
 })

@@ -86,6 +86,32 @@ describe('runTool', () => {
     const [key] = JSON.parse(await runTool(client(keys), 'api_keys', ''))
     assert.deepEqual(key, { name: 'prod', key_prefix: 'inf_ab', spent_today_usd: 2, spent_this_month_usd: null })
   })
+  it('reads one UTC day when asked for a date, and keeps a refused request\'s guardrail record', async () => {
+    let seen: Record<string, unknown> = {}
+    const watching: AccountClient = {
+      get: async (_path, query) => ((seen = query ?? {}), { items: [{ id: 'a', guardrails: { door: 'input', verdict: 'unsafe' } }] }),
+    }
+    const result = JSON.parse(await runTool(watching, 'recent_requests', '{"date": "2026-09-15"}'))
+    assert.equal(seen.start, '2026-09-15T00:00:00Z')
+    assert.equal(seen.end, '2026-09-16T00:00:00.000Z')
+    assert.deepEqual(result.requests[0].guardrails, { door: 'input', verdict: 'unsafe' })
+  })
+  it('reports guardrail activity with only the days something happened', async () => {
+    const summary = {
+      inspected: 1,
+      skipped: 0,
+      refused: 0,
+      by_door: [{ check: 'safety', stage: 'input', safe: 1, unsafe: 0 }],
+      by_category: [],
+      series: [
+        { date: '2026-09-14', inspected: 0, unsafe: 0, refused: 0 },
+        { date: '2026-09-15', inspected: 1, unsafe: 0, refused: 0 },
+      ],
+    }
+    const result = JSON.parse(await runTool(client(summary), 'guardrail_activity', '{}'))
+    assert.equal(result.inspected, 1)
+    assert.deepEqual(result.days_with_activity, [{ date: '2026-09-15', inspected: 1, unsafe: 0, refused: 0 }])
+  })
   it('caps what a tool adds to the conversation', () => {
     assert.ok(capped({ text: 'x'.repeat(RESULT_CAP * 2) }).length < RESULT_CAP + 20)
   })

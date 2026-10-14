@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { citedNumbers } from '@/lib/citations'
 import type { RoutingReceipt, UsageReceipt } from '@/lib/events'
 import type { Source } from '@/lib/retrieval'
 
@@ -15,12 +16,25 @@ function seconds(ms?: number): string | null {
 }
 
 /**
- * Under each answer: the pages it drew on, and "How this was answered", which opens the routing
+ * Under each answer: the pages it CITES (a refusal or an answer from the account alone cites none, and
+ * listing every retrieved page made a refusal look as if it had read them), and "How this was answered", which opens the routing
  * decision Inferbase streamed with the answer (the model, why, how fast and for how much).
  */
-export function Receipt({ sources, routing, usage }: { sources: Source[]; routing?: RoutingReceipt; usage?: UsageReceipt }) {
+export function Receipt({
+  text,
+  sources,
+  routing,
+  usage,
+}: {
+  text: string
+  sources: Source[]
+  routing?: RoutingReceipt
+  usage?: UsageReceipt
+}) {
   const [open, setOpen] = useState(false)
-  const pages = sources.filter((s, i) => sources.findIndex((x) => x.url === s.url) === i)
+  const cited = citedNumbers(text)
+  const used = sources.filter((s) => cited.has(s.n))
+  const pages = used.filter((s, i) => used.findIndex((x) => x.url === s.url) === i)
 
   const facts: [string, string][] = []
   if (routing?.model) facts.push(['Model', routing.model])

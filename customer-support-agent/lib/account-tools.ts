@@ -47,9 +47,11 @@ const pick = (record: unknown, keys: string[]): Json => {
   const source = (record ?? {}) as Json
   return Object.fromEntries(keys.filter((k) => source[k] !== undefined && source[k] !== null).map((k) => [k, source[k]]))
 }
+const _n = (value: unknown) => (typeof value === 'number' ? value : 0)
 const list = (value: unknown): Json[] => (Array.isArray(value) ? (value as Json[]) : [])
 const clamp = (value: unknown, low: number, high: number, fallback: number) =>
   typeof value === 'number' && Number.isFinite(value) ? Math.min(high, Math.max(low, Math.round(value))) : fallback
+const DAY = /^\d{4}-\d{2}-\d{2}$/
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 interface Tool {
@@ -69,19 +71,22 @@ export const TOOLS: Record<string, Tool> = {
     label: 'your recent requests',
     definition: tool(
       'recent_requests',
-      'The newest API requests on this account: when, which model answered, status and error, latency, tokens and cost. Each has an id that explain_request takes.',
+      'API requests on this account, newest first, whatever their age unless filtered: when, which model answered, status and error, latency, tokens, cost, and the guardrail record of a request a guardrail refused. Each has an id that explain_request takes.',
       {
         status: { type: 'string', enum: ['success', 'error'], description: 'Only successful or only failed requests.' },
         hours: { type: 'integer', description: 'Only the last N hours (1 to 720).' },
+        date: { type: 'string', description: 'Only one UTC day, as YYYY-MM-DD (for example a day guardrail_activity names).' },
         limit: { type: 'integer', description: 'How many, newest first (1 to 20, default 10).' },
       },
     ),
     async run(client, args) {
       const hours = args.hours === undefined ? undefined : clamp(args.hours, 1, 720, 24)
+      const day = typeof args.date === 'string' && DAY.test(args.date) ? args.date : undefined
       const page = (await client.get('/api/v1/inference/usage', {
         limit: clamp(args.limit, 1, 20, 10),
         status: args.status === 'success' || args.status === 'error' ? args.status : undefined,
-        start: hours ? new Date(Date.now() - hours * 3600_000).toISOString() : undefined,
+        start: day ? `${day}T00:00:00Z` : hours ? new Date(Date.now() - hours * 3600_000).toISOString() : undefined,
+        end: day ? new Date(Date.parse(`${day}T00:00:00Z`) + 86400_000).toISOString() : undefined,
       })) as Json
       if (page.error) return page
       return {
@@ -91,6 +96,9 @@ export const TOOLS: Record<string, Tool> = {
           model: r.model_display ?? r.model,
           cost_usd: usd(r.cost_micros),
           error: typeof r.error_message === 'string' ? r.error_message.slice(0, 300) : undefined,
+          // A refused request's verdicts (door, check, result; never prompt text). A served request's
+          // guardrail checks are on its routing decision: explain_request.
+          guardrails: r.guardrails ?? undefined,
         })),
       }
     },
@@ -100,7 +108,7 @@ export const TOOLS: Record<string, Tool> = {
     label: 'how a request was routed',
     definition: tool(
       'explain_request',
-      'Why one request was routed the way it was: the task and complexity it was read as, the routing mode, how many models qualified, which was picked and by what margin, the fallbacks, and each routing step in plain words.',
+      'Why one request was routed the way it was: the task and complexity it was read as, the routing mode, how many models qualified, which was picked and by what margin, the fallbacks, each routing step in plain words, and the guardrail checks run on it (in policy_rules_applied).',
       { request_id: { type: 'string', description: 'The id from recent_requests.' } },
     ),
     async run(client, args) {
@@ -160,6 +168,29 @@ export const TOOLS: Record<string, Tool> = {
         top_keys: list(stats.by_key)
           .slice(0, 10)
           .map((k) => ({ ...pick(k, ['name', 'key_prefix', 'requests']), cost_usd: usd(k.cost_micros) })),
+      }
+    },
+  },
+
+  guardrail_activity: {
+    label: 'your guardrail activity',
+    definition: tool(
+      'guardrail_activity',
+      'What the guardrail policies did over a window (the Usage page\'s Guardrails panel): requests inspected, skipped and refused; each door\'s safe and unsafe verdicts; the unsafe categories; and the days anything happened. Counts only, never which prompt.',
+      { days: { type: 'integer', description: 'The last N days (1 to 365, default 30, as the Usage page).' } },
+    ),
+    async run(client, args) {
+      const days = clamp(args.days, 1, 365, 30)
+      const summary = (await client.get('/api/v1/users/account/org/guardrail-usage', { days })) as Json
+      if (summary.error) return summary
+      return {
+        days,
+        ...pick(summary, ['inspected', 'skipped', 'refused']),
+        by_door: list(summary.by_door),
+        unsafe_by_category: list(summary.by_category).map((c) => pick(c, ['name', 'count'])),
+        days_with_activity: list(summary.series).filter(
+          (d) => _n(d.inspected) + _n(d.unsafe) + _n(d.refused) > 0,
+        ),
       }
     },
   },

@@ -70,7 +70,7 @@ launcher above a cookie banner with `data-bottom="96"`.
 
 Inside your own portal, the assistant can also look things up for the person using it: their
 recent requests and why one failed, how a request was routed, what they spent and on which models,
-their API keys, their connections, their policies. It can read and never change anything.
+what their guardrails inspected and refused, their API keys, their connections, their policies. It can read and never change anything.
 
 It runs on a credential made for this: a read-only token, which your portal mints from the person's
 signed-in session (`POST /api/v1/users/access-tokens/read-only`). The token lasts ten minutes, can

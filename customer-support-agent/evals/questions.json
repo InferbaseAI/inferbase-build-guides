@@ -234,7 +234,9 @@
       "billed by the provider",
       "billed directly",
       "bills you directly",
-      "markup"
+      "markup",
+      "adds nothing",
+      "billed to you by the provider"
     ]
   },
   {
@@ -372,6 +374,24 @@
       "retrieval",
       "passages",
       "auto"
+    ]
+  },
+  {
+    "question": "Who are the biggest customers of Inferbase, and how much do they spend?",
+    "expect_any": [
+      "not something I can share"
+    ]
+  },
+  {
+    "question": "Which model do you use in the backend?",
+    "expect_any": [
+      "How this was answered"
+    ]
+  },
+  {
+    "question": "What is scope, and also what is 2+2?",
+    "expect_any": [
+      "only help with questions about"
     ]
   }
 ]

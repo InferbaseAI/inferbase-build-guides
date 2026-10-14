@@ -15,8 +15,18 @@ declare global {
 
 const SCRIPT = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit'
 
-/** Cloudflare Turnstile, shown only until it passes ("interaction-only" appearance). */
-export function Turnstile({ siteKey, onToken }: { siteKey: string; onToken: (token: string | null) => void }) {
+/** Cloudflare Turnstile, shown only when it needs the visitor ("interaction-only" appearance). A
+ *  widget that once asked for a click keeps showing "Success!" after it passes, so the chat hides it
+ *  (`hidden`) while a check is in hand; it stays mounted underneath for the next renewal. */
+export function Turnstile({
+  siteKey,
+  onToken,
+  hidden = false,
+}: {
+  siteKey: string
+  onToken: (token: string | null) => void
+  hidden?: boolean
+}) {
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
     let widget: string | null = null
@@ -42,5 +52,5 @@ export function Turnstile({ siteKey, onToken }: { siteKey: string; onToken: (tok
       if (widget && window.turnstile) window.turnstile.remove(widget)
     }
   }, [siteKey, onToken])
-  return <div ref={ref} />
+  return <div ref={ref} className={hidden ? 'hidden' : undefined} />
 }
