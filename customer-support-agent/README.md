@@ -106,7 +106,13 @@ fields an answer needs (`lib/account-tools.ts`), capped in size.
 ```bash
 npm run eval -- --retrieval-only   # does each question find the right page (embeddings only)
 npm run eval                       # full answers: facts, refusals off-topic, handoff
+npm run eval -- --account          # account mode, against the made-up account in evals/account.json
 ```
+
+Account mode is measured without a real account or a token: the chat route's own answer loop
+(`lib/answer.ts`) runs with the account tools reading `evals/account.json`, a made-up account whose
+figures appear nowhere else, so a right answer can only come from the tools. Each case names the
+lookups it expects and the facts the answer must, and must not, contain.
 
 The questions are in `evals/questions.json`. Replace them with real questions your customers ask,
 each with the page that answers it. Run the evaluation after every change to the docs, the prompt
@@ -139,7 +145,8 @@ sequenceDiagram
 | `lib/account-tools.ts` | Account mode: the read-only lookups, each one GET with the person's token |
 | `lib/account-token.ts` | Account mode: the token handshake with the portal that frames the app |
 | `lib/rate-limit.ts` | Per-visitor limits (in memory; implement `Limiter` on Redis for several instances) |
-| `app/api/chat/route.ts` | One answer, streamed |
+| `lib/answer.ts` | One answer: the model call, and in account mode the lookups it asks for |
+| `app/api/chat/route.ts` | Checks the visitor, retrieves the passages, streams the answer |
 | `app/api/handoff/route.ts` | Emails the conversation to your support inbox |
 | `public/embed.js` | The launcher for your site |
 

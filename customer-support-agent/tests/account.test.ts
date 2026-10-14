@@ -68,8 +68,18 @@ describe('runTool', () => {
     assert.equal(result.picked, 'Model One')
     assert.deepEqual(result.fallbacks_standing_by, ['Model Two'])
     assert.equal(result.outcome, 'served primary')
-    assert.deepEqual(result.eligibility_steps, ['pool_loaded 9 -> 4', 'session_affinity'])
+    assert.deepEqual(result.how_it_was_routed, ['pool_loaded 9 -> 4', 'session_affinity'])
     assert.doesNotMatch(text, /sticky_ineligible/)
+  })
+  it('uses the API sentences for the routing steps when it has them', async () => {
+    const view = {
+      chain_attempted: [],
+      filter_trail: [{ step: 'session_affinity', outcome: 'sticky_ineligible' }],
+      filter_trail_text: ["Moved off the conversation's model: it is above your cost ceiling."],
+    }
+    const id = '0b0c1f9e-6b1e-4c43-9d7e-2c9f3f1a8b10'
+    const result = JSON.parse(await runTool(client(view), 'explain_request', JSON.stringify({ request_id: id })))
+    assert.deepEqual(result.how_it_was_routed, ["Moved off the conversation's model: it is above your cost ceiling."])
   })
   it('never returns a key secret field, only names and prefixes', async () => {
     const keys = [{ name: 'prod', key_prefix: 'inf_ab', key: 'inf_secret', current_day_spend_micros: 2_000_000 }]

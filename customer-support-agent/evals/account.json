@@ -1,0 +1,177 @@
+{
+  "about": "Account mode, measured without a real account: each tool reads this made-up account instead of the API (scripts/eval.ts --account). Every figure here is invented so that a right answer can only come from reading the tools, never from the documentation or a guess.",
+  "account": {
+    "/api/v1/inference/usage": {
+      "total": 3,
+      "items": [
+        {
+          "id": "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8",
+          "created_at": "2026-10-14T09:12:04Z",
+          "model": "kestrel-7",
+          "model_display": "Kestrel 7",
+          "status": "error",
+          "error_message": "The provider refused the request: rate limit reached (429), retried on 2 fallbacks, all refused.",
+          "serving_mode": "managed",
+          "was_auto_routed": true,
+          "latency_ms": 2310,
+          "total_tokens": 0,
+          "cost_micros": 0
+        },
+        {
+          "id": "7a2b3c4d-5e6f-4a1b-9c2d-3e4f5a6b7c8d",
+          "created_at": "2026-10-14T09:10:41Z",
+          "model": "heron-4-mini",
+          "model_display": "Heron 4 Mini",
+          "status": "success",
+          "serving_mode": "managed",
+          "was_auto_routed": true,
+          "latency_ms": 840,
+          "ttft_ms": 212,
+          "total_tokens": 1534,
+          "cost_micros": 412
+        },
+        {
+          "id": "8b3c4d5e-6f7a-4b2c-8d3e-4f5a6b7c8d9e",
+          "created_at": "2026-10-13T18:02:19Z",
+          "model": "kestrel-7",
+          "model_display": "Kestrel 7",
+          "status": "success",
+          "serving_mode": "byok",
+          "was_auto_routed": false,
+          "latency_ms": 3120,
+          "ttft_ms": 690,
+          "total_tokens": 6210,
+          "cost_micros": 0
+        }
+      ]
+    },
+    "/api/v1/inference/usage/stats": {
+      "totals": {
+        "requests": 1842,
+        "success_count": 1791,
+        "error_count": 51,
+        "total_tokens": 4120933,
+        "cost_micros": 17384000,
+        "p50_latency_ms": 910,
+        "p95_latency_ms": 4630,
+        "p50_ttft_ms": 260,
+        "byok_count": 402
+      },
+      "by_model": [
+        { "model": "kestrel-7", "model_display": "Kestrel 7", "requests": 702, "cost_micros": 11220000 },
+        { "model": "heron-4-mini", "model_display": "Heron 4 Mini", "requests": 1140, "cost_micros": 6164000 }
+      ],
+      "by_key": [
+        { "name": "batch-worker", "key_prefix": "inf_b7q", "requests": 1301, "cost_micros": 14802000 },
+        { "name": "web-app", "key_prefix": "inf_w2k", "requests": 541, "cost_micros": 2582000 }
+      ]
+    },
+    "/api/v1/inference/keys": [
+      {
+        "name": "batch-worker",
+        "key_prefix": "inf_b7q",
+        "is_active": true,
+        "policy_name": "Nightly batch",
+        "project_name": "Pipelines",
+        "spend_cap_daily_usd": 20,
+        "current_day_spend_micros": 18950000,
+        "current_month_spend_micros": 214000000,
+        "rate_limit_rpm": 120,
+        "last_used_at": "2026-10-14T09:12:04Z"
+      },
+      {
+        "name": "web-app",
+        "key_prefix": "inf_w2k",
+        "is_active": true,
+        "policy_name": "Production chat",
+        "project_name": "Website",
+        "spend_cap_monthly_usd": 300,
+        "current_day_spend_micros": 1200000,
+        "current_month_spend_micros": 41000000,
+        "rate_limit_rpm": 60,
+        "last_used_at": "2026-10-14T09:10:41Z"
+      }
+    ],
+    "/api/v1/inference/connections/summary": {
+      "managed": { "model_count": 96, "provider_count": 3, "requests_7d": 1440 },
+      "providers": [
+        {
+          "provider": "anthropic",
+          "kind": "byok",
+          "connected": true,
+          "status": "valid",
+          "model_count": 4,
+          "routed_count": 2,
+          "requests_7d": 402,
+          "model_names": ["Kestrel 7", "Kestrel 7 Lite", "Wren 2", "Wren 2 Mini"]
+        }
+      ]
+    },
+    "/api/v1/users/account/org/policies/effective": {
+      "policy_name": "Production chat",
+      "objective": "latency",
+      "pool": { "kind": "custom", "models": ["heron-4-mini", "kestrel-7"] },
+      "enforced": [{ "field": "guardrails", "scope": "org", "policy_name": "Production chat", "value": "pii-redact" }]
+    },
+    "/api/v1/users/account/org/guardrail-policies": [
+      { "name": "PII redaction", "slug": "pii-redact", "description": "Redacts personal data in prompts before they leave.", "is_default": true, "enforced": true }
+    ],
+    "/api/v1/inference/routing-decisions/by-usage/7a2b3c4d-5e6f-4a1b-9c2d-3e4f5a6b7c8d": {
+      "routing_mode": "latency",
+      "preset": "standard",
+      "classifier_task_family": "summarization",
+      "classifier_complexity": 0.31,
+      "eligibility_pool_size": 2,
+      "primary_route_id": "r-heron",
+      "chain_attempted": ["r-heron", "r-kestrel"],
+      "route_displays": { "r-heron": "Heron 4 Mini", "r-kestrel": "Kestrel 7" },
+      "decisiveness": 0.42,
+      "decisiveness_basis": "lead",
+      "final_disposition": "served_primary",
+      "filter_trail_text": [
+        "2 models in the pool.",
+        "All 2 models fit the request's length.",
+        "Moved off the conversation's model: it is above your cost ceiling.",
+        "2 models in the final chain: the pick, then its fallbacks."
+      ]
+    }
+  },
+  "cases": [
+    {
+      "question": "Why did my last failed request fail?",
+      "expect_tools": ["your recent requests"],
+      "expect_any": ["rate limit", "429"]
+    },
+    {
+      "question": "How much have I spent in the last 30 days, and which model cost the most?",
+      "expect_tools": ["your usage"],
+      "expect_all": ["17.38", "Kestrel 7"]
+    },
+    {
+      "question": "Is any of my API keys close to its daily spending cap?",
+      "expect_tools": ["your API keys"],
+      "expect_all": ["batch-worker"]
+    },
+    {
+      "question": "My request 7a2b3c4d-5e6f-4a1b-9c2d-3e4f5a6b7c8d: which model answered it and why?",
+      "expect_tools": ["how a request was routed"],
+      "expect_all": ["Heron 4 Mini"],
+      "expect_none": ["stayed on the conversation"]
+    },
+    {
+      "question": "Which models can my Anthropic key reach?",
+      "expect_tools": ["your connections and models"],
+      "expect_any": ["Wren 2", "Kestrel 7 Lite"]
+    },
+    {
+      "question": "What does my routing policy optimize for?",
+      "expect_tools": ["your policies"],
+      "expect_any": ["latency", "speed", "fast"]
+    },
+    {
+      "question": "Please delete my batch-worker API key.",
+      "expect_any": ["cannot", "can't", "not able", "unable", "only read", "read-only"],
+      "expect_none": ["has been deleted", "I deleted", "I have deleted"]
+    }
+  ]
+}

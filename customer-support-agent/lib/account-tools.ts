@@ -100,7 +100,7 @@ export const TOOLS: Record<string, Tool> = {
     label: 'how a request was routed',
     definition: tool(
       'explain_request',
-      'Why one request was routed the way it was: the task and complexity it was read as, the routing mode, how many models qualified, which was picked and by what margin, the fallbacks, and the eligibility steps (how many models each step kept).',
+      'Why one request was routed the way it was: the task and complexity it was read as, the routing mode, how many models qualified, which was picked and by what margin, the fallbacks, and each routing step in plain words.',
       { request_id: { type: 'string', description: 'The id from recent_requests.' } },
     ),
     async run(client, args) {
@@ -108,9 +108,9 @@ export const TOOLS: Record<string, Tool> = {
       if (!UUID.test(id)) return { error: 'request_id must be the id of a request from recent_requests.' }
       const view = (await client.get(`/api/v1/inference/routing-decisions/by-usage/${id}`)) as Json
       if (view.error) return view
-      // What the portal's own request detail states, no more: the trail's internal outcome and reason
-      // codes are left out, because a model reads them as English and gets them backwards
-      // ("sticky_ineligible" is the conversation's earlier model NOT being eligible).
+      // What the portal's own request detail states. The steps come as the API's plain sentences
+      // (`filter_trail_text`), never the raw records: their codes read backwards as English
+      // ("sticky_ineligible" is the conversation's earlier model NOT qualifying).
       const displays = (view.route_displays ?? {}) as Record<string, string>
       const named = (routeId: unknown) => (typeof routeId === 'string' ? (displays[routeId] ?? 'a since-removed model') : null)
       const chain = list(view.chain_attempted) as unknown[]
@@ -123,10 +123,13 @@ export const TOOLS: Record<string, Tool> = {
         fallbacks_standing_by: chain.slice(1).map(named),
         outcome: typeof view.final_disposition === 'string' ? view.final_disposition.replace(/_/g, ' ') : undefined,
         policy_rules_applied: view.user_rules_applied,
-        eligibility_steps: list(view.filter_trail)
-          .slice(0, 25)
-          .map((step) => (typeof step.in === 'number' && typeof step.out === 'number' ? `${step.step} ${step.in} -> ${step.out}` : step.step))
-          .filter(Boolean),
+        how_it_was_routed: Array.isArray(view.filter_trail_text)
+          ? (view.filter_trail_text as unknown[]).filter((t) => typeof t === 'string').slice(0, 25)
+          : // An API from before the sentences: step names and counts, still no codes.
+            list(view.filter_trail)
+              .slice(0, 25)
+              .map((step) => (typeof step.in === 'number' && typeof step.out === 'number' ? `${step.step} ${step.in} -> ${step.out}` : step.step))
+              .filter(Boolean),
       }
     },
   },

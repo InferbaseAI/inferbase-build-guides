@@ -1,19 +1,9 @@
 import { APIError } from 'openai'
-import type OpenAI from 'openai'
-import { accountClient, runTool, TokenExpired, TOOL_DEFINITIONS, TOOLS } from '@/lib/account-tools'
+import { accountClient, TokenExpired } from '@/lib/account-tools'
+import { answer } from '@/lib/answer'
 import { config } from '@/lib/config'
-import {
-  addUsage,
-  collectToolCalls,
-  encodeEvent,
-  isGuardrailRefusal,
-  readChunk,
-  type ChatEvent,
-  type ToolCall,
-  type UsageReceipt,
-} from '@/lib/events'
+import { encodeEvent, isGuardrailRefusal, type ChatEvent } from '@/lib/events'
 import { inferbase } from '@/lib/inferbase'
-import { systemPrompt } from '@/lib/prompt'
 import { checkLimits, MemoryLimiter, visitorAddress } from '@/lib/rate-limit'
 import { retrieve } from '@/lib/retrieval'
 import { checkVisitor, VERIFY_REQUIRED } from '@/lib/turnstile'
@@ -72,57 +62,14 @@ export async function POST(request: Request): Promise<Response> {
         const { passages, sources } = await retrieve(query, config.retrieval.topK)
         send({ type: 'sources', sources })
 
-        const client = inferbase(accountToken ? config.accountApiKey() : config.apiKey())
-        const account = accountToken ? accountClient(config.apiOrigin, accountToken) : null
-        const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
-          {
-            role: 'system',
-            content: systemPrompt(config.productName, passages, sources, config.comparisonsUrl, Boolean(account)),
-          },
-          ...valid.turns,
-        ]
-        let usage: UsageReceipt | undefined
-
-        // One model call, or in account mode a few: the model may ask for account lookups, which run
-        // here and go back to it, until it answers (or the round limit makes it answer with no tools).
-        for (let round = 0; ; round++) {
-          const withTools = account !== null && round < config.maxToolRounds
-          const completion = await client.chat.completions.create({
-            model: config.chatModel,
-            stream: true,
-            max_tokens: config.maxAnswerTokens,
-            reasoning_effort: config.reasoningEffort,
-            messages,
-            ...(withTools ? { tools: TOOL_DEFINITIONS } : {}),
-          })
-          const calls = new Map<number, ToolCall>()
-          let text = ''
-          for await (const chunk of completion) {
-            collectToolCalls(calls, chunk)
-            const event = readChunk(chunk)
-            if (!event) continue
-            if (event.type === 'usage') usage = addUsage(usage, event.usage)
-            else {
-              if (event.type === 'delta') text += event.text
-              send(event)
-            }
-          }
-          if (!account || calls.size === 0) break
-
-          // Words the model wrote before its lookups ("Let me check") stay; the answer follows them.
-          if (text && !text.endsWith('\n')) send({ type: 'delta', text: '\n\n' })
-          const ordered = [...calls.values()]
-          messages.push({
-            role: 'assistant',
-            content: text || null,
-            tool_calls: ordered.map((c) => ({ id: c.id, type: 'function', function: { name: c.name, arguments: c.arguments } })),
-          })
-          for (const call of ordered) {
-            send({ type: 'tool', label: TOOLS[call.name]?.label ?? call.name })
-            messages.push({ role: 'tool', tool_call_id: call.id, content: await runTool(account, call.name, call.arguments) })
-          }
-        }
-        if (usage) send({ type: 'usage', usage })
+        await answer({
+          client: inferbase(accountToken ? config.accountApiKey() : config.apiKey()),
+          account: accountToken ? accountClient(config.apiOrigin, accountToken) : null,
+          turns: valid.turns,
+          passages,
+          sources,
+          send,
+        })
         send({ type: 'done' })
       } catch (error) {
         if (error instanceof TokenExpired) {
