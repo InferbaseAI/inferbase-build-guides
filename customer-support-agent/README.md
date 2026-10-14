@@ -6,6 +6,11 @@ why, and what it cost.
 
 One API key. No vector database, no cloud console, no model list to maintain.
 
+The [customer support assistant build guide](https://inferbase.ai/solutions/customer-support-assistant)
+explains the design, the routing policy and the security choices behind this app, with what was
+measured. A live copy answers questions about Inferbase as the Copilot on
+[inferbase.ai](https://inferbase.ai).
+
 - **Answers from your docs.** `npm run index` reads your `llms-full.txt`, splits it into passages
   and embeds them through Inferbase. Each question retrieves the closest passages, and the answer
   cites them as [1], [2].
@@ -74,14 +79,19 @@ or the routing policy.
 
 ## How it works
 
-```
-browser ── POST /api/chat ──▶ limits, Turnstile, validation
-                              │
-                              ├─ embed the question ──────────▶ Inferbase /v1/embeddings
-                              ├─ top passages from data/index.json (in memory)
-                              └─ chat, streamed, model "auto" ─▶ Inferbase /v1/chat/completions
-                                     routing event ─┐              (policy, guardrails, fallbacks)
-browser ◀── NDJSON: sources, routing, text, usage ◀─┘
+```mermaid
+sequenceDiagram
+    participant B as Browser
+    participant A as This app (/api/chat)
+    participant I as Inferbase
+    B->>A: POST the question
+    A->>A: Rate limits, Turnstile, validation
+    A->>I: Embed the question (/v1/embeddings)
+    A->>A: Top passages from data/index.json, in memory
+    A->>I: Chat, streamed, model "auto" (/v1/chat/completions)
+    Note over I: Your policy picks the model, applies guardrails and fallbacks
+    I-->>A: Routing event, then the answer
+    A-->>B: NDJSON stream: sources, routing, text, usage
 ```
 
 | File | What it does |

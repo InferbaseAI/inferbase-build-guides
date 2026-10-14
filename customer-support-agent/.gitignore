@@ -8,3 +8,6 @@ next-env.d.ts
 data/index.json
 .vercel
 .env*
+
+# Written by `next dev` on every start (Next.js agent rules); generated, so not tracked.
+AGENTS.md

@@ -1,7 +1,7 @@
 /**
  * Per-visitor limits for an open endpoint, as fixed windows per minute and per day.
  *
- * In memory, so the counts are per server instance: right for one instance or a quickstart, and
+ * In memory, so the counts are per server instance: right for one instance or a small deployment, and
  * an honest floor on serverless. For several instances, implement `Limiter` on a shared store
  * (Redis, Upstash, your database) and pass it to `checkLimits`. Spend is bounded regardless by the
  * API key's daily spend cap in Inferbase, which is the control that cannot be bypassed.
