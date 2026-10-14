@@ -37,6 +37,10 @@ export type ChatEvent =
   | { type: 'routing'; routing: RoutingReceipt }
   | { type: 'delta'; text: string }
   | { type: 'usage'; usage: UsageReceipt }
+  /** Account mode: a lookup the answer is about to use ("your recent requests"). */
+  | { type: 'tool'; label: string }
+  /** Account mode: the read-only token was refused (expired or signed out); ask the portal again. */
+  | { type: 'token_expired' }
   | { type: 'error'; message: string }
   | { type: 'done' }
 
@@ -76,4 +80,42 @@ export function encodeEvent(event: ChatEvent): Uint8Array {
  *  from other 4xx answers by its message, so a configuration error never reads as "rephrase". */
 export function isGuardrailRefusal(status: number | undefined, message: string): boolean {
   return (status === 400 || status === 403) && /guardrail/i.test(message)
+}
+
+/** One tool call assembled from the streamed fragments the API sends (id and name first, then the
+ *  arguments in pieces), keyed by its index in the turn. */
+export interface ToolCall {
+  id: string
+  name: string
+  arguments: string
+}
+
+export function collectToolCalls(calls: Map<number, ToolCall>, chunk: unknown): void {
+  const record = (chunk ?? {}) as Record<string, unknown>
+  const choices = record.choices as { delta?: { tool_calls?: unknown } }[] | undefined
+  const fragments = choices?.[0]?.delta?.tool_calls
+  if (!Array.isArray(fragments)) return
+  for (const fragment of fragments as { index?: number; id?: string; function?: { name?: string; arguments?: string } }[]) {
+    const index = fragment.index ?? 0
+    const call = calls.get(index) ?? { id: '', name: '', arguments: '' }
+    if (fragment.id) call.id = fragment.id
+    if (fragment.function?.name) call.name += fragment.function.name
+    if (fragment.function?.arguments) call.arguments += fragment.function.arguments
+    calls.set(index, call)
+  }
+}
+
+/** Usage over several model calls (one answer in account mode can take a few): summed. */
+export function addUsage(total: UsageReceipt | undefined, next: UsageReceipt): UsageReceipt {
+  if (!total) return { ...next }
+  const sum = (a?: number, b?: number) => (a === undefined && b === undefined ? undefined : (a ?? 0) + (b ?? 0))
+  return {
+    ...next,
+    prompt_tokens: sum(total.prompt_tokens, next.prompt_tokens),
+    completion_tokens: sum(total.completion_tokens, next.completion_tokens),
+    cost_micros: sum(total.cost_micros, next.cost_micros),
+    latency_ms: sum(total.latency_ms, next.latency_ms),
+    // The first VISIBLE token comes in the last call, after the earlier ones finished.
+    ttft_ms: next.ttft_ms === undefined ? total.ttft_ms : (total.latency_ms ?? 0) + next.ttft_ms,
+  }
 }

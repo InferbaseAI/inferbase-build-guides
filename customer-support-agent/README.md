@@ -66,6 +66,41 @@ to change it), so they are easy to find in your logs.
 Set `FRAME_ANCESTORS=https://your-site.com` on the deployment so your site may frame it. Raise the
 launcher above a cookie banner with `data-bottom="96"`.
 
+## Account mode: answers about the signed-in person's own account
+
+Inside your own portal, the assistant can also look things up for the person using it: their
+recent requests and why one failed, how a request was routed, what they spent and on which models,
+their API keys, their connections, their policies. It can read and never change anything.
+
+It runs on a credential made for this: a read-only token, which your portal mints from the person's
+signed-in session (`POST /api/v1/users/access-tokens/read-only`). The token lasts ten minutes, can
+only make GET requests to the account endpoints the tools use, and ends when that session signs out.
+The browser passes it to this app per request; the app uses it for the account lookups only and
+never stores or logs it. Your own API key still pays for the answers, and the two never mix.
+
+1. Set `ACCOUNT_PARENT_ORIGINS=https://your-portal.com` (the pages allowed to hand over a token) and
+   add that origin to `FRAME_ANCESTORS`. Optionally set `INFERBASE_ACCOUNT_API_KEY` to a second key
+   with its own daily cap.
+2. In your portal, frame `https://YOUR-DEPLOYMENT/?embed=1&account=1` for signed-in people, and
+   answer the frame's request for a token:
+
+```ts
+window.addEventListener('message', async (event) => {
+  // Only your own frame, at the assistant's origin.
+  if (event.origin !== ASSISTANT_ORIGIN || event.source !== frame.contentWindow) return
+  if (event.data?.type !== 'inferbase:ready') return
+  const { token, expires_at } = await mintReadOnlyToken() // POST /api/v1/users/access-tokens/read-only, as the signed-in person
+  frame.contentWindow.postMessage({ type: 'inferbase:token', token, expires_at }, ASSISTANT_ORIGIN)
+})
+```
+
+The frame asks again a minute before the token expires, and when the API refuses it. Without a
+token it answers from the documentation only, exactly as on a public page.
+
+Tool results are untrusted text, like any page the model reads: they pass the key's tool-output
+guardrail before the model sees them, and the prompt treats them as data. Each tool returns only the
+fields an answer needs (`lib/account-tools.ts`), capped in size.
+
 ## Check the answers
 
 ```bash
@@ -101,6 +136,8 @@ sequenceDiagram
 | `lib/retrieval.ts` | Loads the index, embeds the question, returns numbered sources |
 | `lib/prompt.ts` | The system prompt: answer from the passages, cite, refuse off-topic, hand off |
 | `lib/events.ts` | Reads Inferbase's routing and usage events from the stream |
+| `lib/account-tools.ts` | Account mode: the read-only lookups, each one GET with the person's token |
+| `lib/account-token.ts` | Account mode: the token handshake with the portal that frames the app |
 | `lib/rate-limit.ts` | Per-visitor limits (in memory; implement `Limiter` on Redis for several instances) |
 | `app/api/chat/route.ts` | One answer, streamed |
 | `app/api/handoff/route.ts` | Emails the conversation to your support inbox |

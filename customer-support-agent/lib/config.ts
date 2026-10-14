@@ -19,6 +19,24 @@ export const config = {
     if (!key) throw new Error('INFERBASE_API_KEY is not set. Copy .env.example to .env.local and add a key.')
     return key
   },
+  /** The key that pays for answers in account mode (signed in, inside your portal). Optional: a
+   *  separate key lets that mode have its own daily cap; without one the main key is used. */
+  accountApiKey(): string {
+    return process.env.INFERBASE_ACCOUNT_API_KEY || this.apiKey()
+  },
+  /** Where the account tools read from (they call /api/v1/..., not /v1): the API's own origin, unless
+   *  INFERBASE_ACCOUNT_API_URL names another (a staging account API beside a production gateway). */
+  get apiOrigin(): string {
+    return new URL(process.env.INFERBASE_ACCOUNT_API_URL || this.baseURL).origin
+  },
+  /** Pages allowed to hand this app a signed-in person's read-only token (your portal's origin, for
+   *  example https://inferbase.ai). Empty turns account mode off: a token from anywhere else is ignored. */
+  accountParentOrigins: (process.env.ACCOUNT_PARENT_ORIGINS || '')
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean),
+  /** Model calls one answer may make in account mode: each tool round is one, plus the answer. */
+  maxToolRounds: int('MAX_TOOL_ROUNDS', 3),
   /** Names this app in your Inferbase usage logs and error tags (X-Inferbase-Source). */
   source: process.env.INFERBASE_SOURCE || 'support-agent',
   chatModel: process.env.CHAT_MODEL || 'auto',

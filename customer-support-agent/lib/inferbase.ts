@@ -6,9 +6,9 @@ import { config } from './config'
  * fallbacks and spend caps are the API key's routing policy, configured in Inferbase, so nothing
  * about them is in this code. `model: "auto"` asks the policy to choose per request.
  */
-export function inferbase(): OpenAI {
+export function inferbase(apiKey: string = config.apiKey()): OpenAI {
   return new OpenAI({
-    apiKey: config.apiKey(),
+    apiKey,
     baseURL: config.baseURL,
     defaultHeaders: { 'X-Inferbase-Source': config.source },
   })

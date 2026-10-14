@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useAccountToken } from '@/lib/account-token'
 import type { ChatEvent, RoutingReceipt, UsageReceipt } from '@/lib/events'
 import { HANDOFF_MARKER } from '@/lib/prompt'
 import type { Source } from '@/lib/retrieval'
@@ -14,6 +15,8 @@ interface Message {
   role: 'user' | 'assistant'
   content: string
   sources?: Source[]
+  /** Account lookups this answer made ("your recent requests"). */
+  lookups?: string[]
   routing?: RoutingReceipt
   usage?: UsageReceipt
   error?: string
@@ -30,16 +33,28 @@ const SUGGESTIONS = [
   'What does a guardrail policy check?',
 ]
 
+// Account mode: questions about the person's own account, each answered by one of the account tools.
+const ACCOUNT_SUGGESTIONS = [
+  'Why did my last failed request fail?',
+  'What have I spent in the last 7 days, and on which models?',
+  'How was my most recent request routed?',
+  'Which models can my connections reach?',
+  'What does my routing policy enforce?',
+]
+
 export function Chat({
   productName,
   assistantName,
   embedded,
+  parentOrigins,
   handoffEnabled,
   turnstileSiteKey,
 }: {
   productName: string
   assistantName: string
   embedded: boolean
+  /** Account mode when non-empty: the portal origins allowed to hand this frame a read-only token. */
+  parentOrigins: string[]
   handoffEnabled: boolean
   turnstileSiteKey: string
 }) {
@@ -53,6 +68,8 @@ export function Chat({
   const [checkKey, setCheckKey] = useState(0)
   const [handoffOpen, setHandoffOpen] = useState(false)
   const bottom = useRef<HTMLDivElement>(null)
+  const account = useAccountToken(parentOrigins)
+  const signedIn = account.enabled && account.token !== null
   const onToken = useCallback((token: string | null) => setTurnstileToken(token), [])
   const resetCheck = useCallback(() => {
     setTurnstileToken(null)
@@ -86,7 +103,7 @@ export function Chat({
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: history, session, turnstileToken }),
+        body: JSON.stringify({ messages: history, session, turnstileToken, accountToken: account.token ?? undefined }),
       })
       if (!response.ok || !response.body) {
         const body = (await response.json().catch(() => ({}))) as { error?: string; code?: string }
@@ -111,6 +128,10 @@ export function Chat({
           if (!line) continue
           const event = JSON.parse(line) as ChatEvent
           if (event.type === 'delta') answer += event.text
+          if (event.type === 'token_expired') {
+            account.expired()
+            setInput(text)
+          }
           if (event.type === 'session') {
             // The token was spent on this check; the session covers what follows.
             setSession(event.token)
@@ -145,7 +166,9 @@ export function Chat({
         <Mark />
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-sm font-semibold">{title}</h1>
-          <p className="truncate text-xs text-muted-foreground">Answers from the {productName} documentation</p>
+          <p className="truncate text-xs text-muted-foreground">
+            {signedIn ? 'Answers from the documentation and your account' : `Answers from the ${productName} documentation`}
+          </p>
         </div>
         {messages.length > 0 && (
           <button type="button" onClick={reset} disabled={busy} className="rounded-md border border-border px-2.5 py-1 text-xs hover:bg-muted disabled:opacity-50">
@@ -167,12 +190,14 @@ export function Chat({
               <div className="space-y-1">
                 <p className="font-medium">Hi, I am the {title}.</p>
                 <p className="text-muted-foreground">
-                  Ask me how {productName} works: routing, keys, policies, the API. I answer from the documentation and show the pages I used.
+                  {signedIn
+                    ? `Ask me about ${productName} or your own account: requests, errors, spend, keys, connections, policies. I can look things up but cannot change anything.`
+                    : `Ask me how ${productName} works: routing, keys, policies, the API. I answer from the documentation and show the pages I used.`}
                 </p>
               </div>
             </div>
             <div className="flex flex-col items-start gap-2 pl-10">
-              {SUGGESTIONS.map((s) => (
+              {(signedIn ? ACCOUNT_SUGGESTIONS : SUGGESTIONS).map((s) => (
                 <button
                   key={s}
                   type="button"
@@ -195,6 +220,9 @@ export function Chat({
             <div key={i} className="flex gap-3">
               <Mark small />
               <div className="min-w-0 flex-1 pt-0.5">
+                {m.lookups && m.lookups.length > 0 && (
+                  <p className="mb-1.5 text-xs text-muted-foreground">Checked {m.lookups.join(', ')}</p>
+                )}
                 {m.content ? <Answer text={m.content.replace(HANDOFF_MARKER, '')} sources={m.sources ?? []} /> : m.streaming && <Typing />}
                 {m.error && <p className="rounded-md border border-danger/30 bg-danger/5 px-3 py-2 text-danger">{m.error}</p>}
                 {!m.streaming && !m.error && <Receipt sources={m.sources ?? []} routing={m.routing} usage={m.usage} />}
@@ -303,9 +331,13 @@ function apply(event: ChatEvent, update: (patch: (m: Message) => Message) => voi
     case 'usage':
       update((m) => ({ ...m, usage: { ...m.usage, ...event.usage } }))
       break
+    case 'tool':
+      update((m) => ({ ...m, lookups: [...new Set([...(m.lookups ?? []), event.label])] }))
+      break
     case 'error':
       update((m) => ({ ...m, error: event.message }))
       break
+    case 'token_expired':
     case 'session':
     case 'done':
       break
