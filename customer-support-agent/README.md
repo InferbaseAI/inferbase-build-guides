@@ -89,14 +89,22 @@ window.addEventListener('message', async (event) => {
   // Only your own frame, at the assistant's origin.
   if (event.origin !== ASSISTANT_ORIGIN || event.source !== frame.contentWindow) return
   if (event.data?.type !== 'inferbase:ready') return
-  const { token, expires_at } = await mintReadOnlyToken() // POST /api/v1/users/access-tokens/read-only, as the signed-in person
-  // first_name is optional: the greeting uses it ("Hi Vishal") and nothing else does.
-  frame.contentWindow.postMessage({ type: 'inferbase:token', token, expires_at, first_name }, ASSISTANT_ORIGIN)
+  try {
+    const { token, expires_at } = await mintReadOnlyToken() // POST /api/v1/users/access-tokens/read-only, as the signed-in person
+    // first_name is optional: the greeting uses it ("Hi Vishal") and nothing else does.
+    frame.contentWindow.postMessage({ type: 'inferbase:token', token, expires_at, first_name }, ASSISTANT_ORIGIN)
+  } catch {
+    // Say so, and the frame shows its documentation-only greeting at once instead of waiting.
+    frame.contentWindow.postMessage({ type: 'inferbase:no-token' }, ASSISTANT_ORIGIN)
+  }
 })
 ```
 
-The frame asks again a minute before the token expires, and when the API refuses it. Without a
-token it answers from the documentation only, exactly as on a public page.
+Until the first answer arrives, the frame shows a placeholder rather than the public greeting, so a
+signed-in person never sees one greeting swap for another; after four seconds with no answer it gives
+up and shows the public one. Minting as your panel opens, in parallel with the frame's load, keeps
+that wait short. The frame asks again a minute before the token expires, and when the API refuses it.
+Without a token it answers from the documentation only, exactly as on a public page.
 
 Tool results are untrusted text, like any page the model reads: they pass the key's tool-output
 guardrail before the model sees them, and the prompt treats them as data. Each tool returns only the
