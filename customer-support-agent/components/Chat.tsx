@@ -5,7 +5,7 @@ import { useAccountToken } from '@/lib/account-token'
 import type { ChatEvent, RoutingReceipt, UsageReceipt } from '@/lib/events'
 import { HANDOFF_MARKER } from '@/lib/prompt'
 import type { Source } from '@/lib/retrieval'
-import type { ChatTurn } from '@/lib/validate'
+import type { ChatTurn, Lookup } from '@/lib/validate'
 import { Answer } from './Answer'
 import { HandoffForm } from './HandoffForm'
 import { Receipt } from './Receipt'
@@ -17,6 +17,8 @@ interface Message {
   sources?: Source[]
   /** Account lookups this answer made ("your recent requests"). */
   lookups?: string[]
+  /** What those lookups returned, sent back with the next question so a follow-up reads the same facts. */
+  records?: Lookup[]
   routing?: RoutingReceipt
   usage?: UsageReceipt
   error?: string
@@ -100,7 +102,9 @@ export function Chat({
 
   const turns: ChatTurn[] = messages
     .filter((m) => !m.error && !m.streaming)
-    .map((m) => ({ role: m.role, content: m.content }))
+    .map((m) => ({ role: m.role, content: m.content, ...(m.records?.length ? { lookups: m.records } : {}) }))
+  // The support handoff carries the words only, never the account data behind them.
+  const spokenTurns: ChatTurn[] = turns.map(({ role, content }) => ({ role, content }))
 
   async function ask(question: string) {
     const text = question.trim()
@@ -271,7 +275,7 @@ export function Chat({
         )}
         {handoffOpen && (
           <HandoffForm
-            turns={turns}
+            turns={spokenTurns}
             proof={{ session, turnstileToken }}
             needsCheck={needsCheck}
             onProofUsed={resetCheck}
@@ -384,6 +388,9 @@ function apply(event: ChatEvent, update: (patch: (m: Message) => Message) => voi
       break
     case 'tool':
       update((m) => ({ ...m, lookups: [...new Set([...(m.lookups ?? []), event.label])] }))
+      break
+    case 'lookup':
+      update((m) => ({ ...m, records: [...(m.records ?? []), { name: event.name, result: event.result }] }))
       break
     case 'error':
       update((m) => ({ ...m, error: event.message }))

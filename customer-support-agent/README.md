@@ -121,7 +121,11 @@ npm run eval -- --account          # account mode, against the made-up account i
 Account mode is measured without a real account or a token: the chat route's own answer loop
 (`lib/answer.ts`) runs with the account tools reading `evals/account.json`, a made-up account whose
 figures appear nowhere else, so a right answer can only come from the tools. Each case names the
-lookups it expects and the facts the answer must, and must not, contain.
+lookups it expects and the facts the answer must, and must not, contain; a case may open
+mid-conversation (`turns`), because a follow-up is where an answer drifts from the data. The
+browser carries each answer's lookups back with the next question (`lookups` on the assistant turn,
+the `lookup` stream event), so a follow-up about a second key reads the same results rather than
+the model's earlier prose about them.
 
 The questions are in `evals/questions.json`. Replace them with real questions your customers ask,
 each with the page that answers it. Run the evaluation after every change to the docs, the prompt

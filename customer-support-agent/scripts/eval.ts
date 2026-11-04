@@ -25,6 +25,7 @@ import { isGuardrailRefusal } from '../lib/events'
 import { inferbase } from '../lib/inferbase'
 import { HANDOFF_MARKER, systemPrompt } from '../lib/prompt'
 import { retrieve } from '../lib/retrieval'
+import type { ChatTurn } from '../lib/validate'
 
 interface Case {
   question: string
@@ -35,6 +36,8 @@ interface Case {
 }
 
 interface AccountCase {
+  /** The conversation before the question, when the case is a follow-up. */
+  turns?: ChatTurn[]
   question: string
   expect_tools?: string[]
   expect_any?: string[]
@@ -119,7 +122,8 @@ async function accountMain() {
       await answer({
         client: inferbase(config.accountApiKey()),
         account: fixture,
-        turns: [{ role: 'user', content: c.question }],
+        // A case may open mid-conversation (`turns`): a follow-up is where an answer drifts from the data.
+        turns: [...(c.turns ?? []), { role: 'user', content: c.question }],
         passages,
         sources,
         send: (event) => {

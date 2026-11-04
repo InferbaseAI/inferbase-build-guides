@@ -342,11 +342,11 @@
         "only help with questions about"
       ],
       "expect_none": [
-        "= 4",
-        "is 4",
+        "2+2 = 4",
+        "2 + 2 = 4",
         "equals 4",
-        "2+2 is",
-        ": 4"
+        "is 4.",
+        "is 4 "
       ]
     },
     {
@@ -362,6 +362,82 @@
         "[2]",
         "[3]"
       ]
+    },
+    {
+      "turns": [
+        {
+          "role": "user",
+          "content": "What has my batch-worker key spent?"
+        },
+        {
+          "role": "assistant",
+          "content": "Here is the spend for the batch-worker key:\n\n- Today: $18.95\n- This month: $214.00\n\nIt sits in the Pipelines project under the Nightly batch policy, with a daily spend cap of $20.00 and a rate limit of 120 rpm.",
+          "lookups": [
+            {
+              "name": "api_keys",
+              "result": "[{\"name\":\"batch-worker\",\"key_prefix\":\"inf_b7q\",\"is_active\":true,\"policy_name\":\"Nightly batch\",\"project_name\":\"Pipelines\",\"spend_cap_daily_usd\":20,\"rate_limit_rpm\":120,\"last_used_at\":\"2026-10-14T09:12:04Z\",\"spent_today_usd\":18.95,\"spent_this_month_usd\":214},{\"name\":\"web-app\",\"key_prefix\":\"inf_w2k\",\"is_active\":true,\"policy_name\":\"Production chat\",\"project_name\":\"Website\",\"spend_cap_monthly_usd\":300,\"rate_limit_rpm\":60,\"last_used_at\":\"2026-10-14T09:10:41Z\",\"spent_today_usd\":1.2,\"spent_this_month_usd\":41}]"
+            }
+          ]
+        }
+      ],
+      "question": "How about web-app?",
+      "expect_tools": [],
+      "expect_all": [
+        "1.2",
+        "41"
+      ],
+      "expect_none": [
+        "18.95",
+        "214"
+      ],
+      "why": "A follow-up about a second key. The first answer's lookup is carried back, so the figures come from it, not from the earlier prose and never invented (2026-11-04: a real follow-up was answered with numbers no tool had returned)."
+    },
+    {
+      "turns": [
+        {
+          "role": "user",
+          "content": "What has my batch-worker key spent?"
+        },
+        {
+          "role": "assistant",
+          "content": "Here is the spend for the batch-worker key:\n\n- Today: $18.95\n- This month: $214.00\n\nIt sits in the Pipelines project under the Nightly batch policy, with a daily spend cap of $20.00 and a rate limit of 120 rpm."
+        }
+      ],
+      "question": "How about web-app?",
+      "expect_tools": [
+        "your API keys"
+      ],
+      "expect_all": [
+        "1.2",
+        "41"
+      ],
+      "expect_none": [
+        "18.95",
+        "214"
+      ],
+      "why": "The same follow-up when the browser carried nothing back (an older client): the tool is called again rather than the answer guessed."
+    },
+    {
+      "turns": [
+        {
+          "role": "user",
+          "content": "What has my batch-worker key spent?"
+        },
+        {
+          "role": "assistant",
+          "content": "Here is the spend for the batch-worker key:\n\n- Today: $18.95\n- This month: $214.00\n\nIt sits in the Pipelines project under the Nightly batch policy, with a daily spend cap of $20.00 and a rate limit of 120 rpm."
+        }
+      ],
+      "question": "How do I set a monthly budget on my organization?",
+      "expect_tools": [],
+      "expect_any": [
+        "budget"
+      ],
+      "expect_none": [
+        "18.95",
+        "214"
+      ],
+      "why": "A documentation follow-up in account mode: the required choice is the no-lookup one, so no tool runs and the answer comes from the docs, with nothing carried over from the account answer before it."
     }
   ]
 }

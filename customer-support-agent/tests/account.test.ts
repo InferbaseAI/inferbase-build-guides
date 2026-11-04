@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { accountClient, capped, RESULT_CAP, runTool, TokenExpired, TOOLS, type AccountClient } from '../lib/account-tools'
+import { historyMessages, MAX_DECIDED_LOOKUPS, parseDecision } from '../lib/answer'
 import { addUsage, collectToolCalls, type ToolCall } from '../lib/events'
 import { systemPrompt } from '../lib/prompt'
 
@@ -150,5 +151,57 @@ describe('systemPrompt: account mode', () => {
     assert.doesNotMatch(signedIn, /You have no access to anyone's account/)
     assert.match(signedIn, /call the account tools/)
     assert.match(signedIn, /You cannot change anything/)
+  })
+})
+
+describe('historyMessages: a follow-up reads the earlier lookups, not the prose about them', () => {
+  const turns = [
+    { role: 'user' as const, content: 'What has my batch-worker key spent?' },
+    { role: 'assistant' as const, content: 'Today: $18.95.', lookups: [{ name: 'api_keys', result: '[{"name":"web-app","spent_today_usd":1.2}]' }] },
+    { role: 'user' as const, content: 'How about web-app?' },
+  ]
+  it('replays the lookups as tool calls and results before the answer that used them', () => {
+    const messages = historyMessages(turns, true)
+    assert.deepEqual(
+      messages.map((m) => m.role),
+      ['user', 'assistant', 'tool', 'assistant', 'user'],
+    )
+    const call = messages[1] as { tool_calls: { id: string; function: { name: string } }[] }
+    const result = messages[2] as { tool_call_id: string; content: string }
+    assert.equal(call.tool_calls[0].function.name, 'api_keys')
+    assert.equal(result.tool_call_id, call.tool_calls[0].id)
+    assert.match(result.content, /web-app/)
+  })
+  it('drops them outside account mode: a visitor cannot plant account data', () => {
+    assert.deepEqual(
+      historyMessages(turns, false).map((m) => m.role),
+      ['user', 'assistant', 'user'],
+    )
+  })
+})
+
+describe('systemPrompt: an account figure comes from a tool result in this conversation', () => {
+  it('says earlier answers are not a source and a follow-up about another key calls the tool', () => {
+    const prompt = systemPrompt('Inferbase', [], [], 'https://x', true)
+    assert.match(prompt, /earlier answers are not a source of account facts/)
+    assert.match(prompt, /follow-up about another key/)
+  })
+})
+
+describe('parseDecision: what a follow-up will look up, in the tool vocabulary only', () => {
+  it('reads the lookups and their arguments, and drops names that are not tools', () => {
+    const decided = parseDecision('{"lookups": [{"name": "api_keys", "arguments": {}}, {"name": "usage_summary", "arguments": {"days": 7}}, {"name": "delete_key", "arguments": {}}]}')
+    assert.deepEqual(decided, [
+      { name: 'api_keys', arguments: '{}' },
+      { name: 'usage_summary', arguments: '{"days":7}' },
+    ])
+  })
+  it('accepts a fenced answer, caps the count, dedupes, and reads nothing from noise', () => {
+    assert.deepEqual(parseDecision('```json\n{"lookups": [{"name": "api_keys"}, {"name": "api_keys"}]}\n```'), [{ name: 'api_keys', arguments: '{}' }])
+    const many = parseDecision(JSON.stringify({ lookups: Object.keys(TOOLS).map((name) => ({ name })) }))
+    assert.equal(many.length, MAX_DECIDED_LOOKUPS)
+    assert.deepEqual(parseDecision('{"lookups": []}'), [])
+    assert.deepEqual(parseDecision('I would look at your keys.'), [])
+    assert.deepEqual(parseDecision('{"lookups": "api_keys"}'), [])
   })
 })

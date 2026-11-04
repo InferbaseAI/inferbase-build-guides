@@ -29,6 +29,20 @@ describe('validateTurns', () => {
     const long = Array.from({ length: 5 }, (_, i) => ({ role: i % 2 ? 'assistant' : 'user', content: 'x' }))
     assert.equal(validateTurns(long, limits).ok, false)
   })
+  it('carries an answer\'s lookups back on assistant turns only, within the caps', () => {
+    const lookups = [{ name: 'api_keys', result: '[{"name":"web-app"}]' }]
+    const ok = validateTurns([{ role: 'user', content: 'a' }, { role: 'assistant', content: 'b', lookups }, { role: 'user', content: 'c' }], limits)
+    assert.equal(ok.ok, true)
+    if (ok.ok) assert.deepEqual(ok.turns[1].lookups, lookups)
+    const onUser = validateTurns([{ role: 'user', content: 'a', lookups }], limits)
+    assert.equal(onUser.ok, false)
+    const badName = [{ role: 'user', content: 'a' }, { role: 'assistant', content: 'b', lookups: [{ name: '../x', result: '' }] }, { role: 'user', content: 'c' }]
+    assert.equal(validateTurns(badName, limits).ok, false)
+    const tooBig = [{ role: 'user', content: 'a' }, { role: 'assistant', content: 'b', lookups: [{ name: 'api_keys', result: 'x'.repeat(8001) }] }, { role: 'user', content: 'c' }]
+    assert.equal(validateTurns(tooBig, limits).ok, false)
+    const tooMany = [{ role: 'user', content: 'a' }, { role: 'assistant', content: 'b', lookups: Array(7).fill(lookups[0]) }, { role: 'user', content: 'c' }]
+    assert.equal(validateTurns(tooMany, limits).ok, false)
+  })
 })
 
 describe('checkLimits', () => {

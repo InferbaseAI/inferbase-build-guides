@@ -39,6 +39,9 @@ export type ChatEvent =
   | { type: 'usage'; usage: UsageReceipt }
   /** Account mode: a lookup the answer is about to use ("your recent requests"). */
   | { type: 'tool'; label: string }
+  /** Account mode: what that lookup returned, for the browser to carry back with the answer, so a
+   *  follow-up question reads the same facts rather than the model's earlier prose about them. */
+  | { type: 'lookup'; name: string; result: string }
   /** Account mode: the read-only token was refused (expired or signed out); ask the portal again. */
   | { type: 'token_expired' }
   | { type: 'error'; message: string }
